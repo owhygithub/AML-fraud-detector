@@ -1,0 +1,44 @@
+Understanding issacchan26's code on AMLDetectionWithGNN: https://github.com/issacchan26/AntiMoneyLaunderingDetectionWithGNN/blob/main/anti-money-laundering-detection-with-gnn.ipynb
+
+1. Datasets: https://github.com/issacchan26/AntiMoneyLaunderingDetectionWithGNN/blob/main/dataset.py 
+2. Model: https://github.com/issacchan26/AntiMoneyLaunderingDetectionWithGNN/blob/main/model.py 
+3. Training: https://github.com/issacchan26/AntiMoneyLaunderingDetectionWithGNN/blob/main/train.py 
+
+1. DATASETS
+
+a/ data visualization
+- Loading "HI-Small_Trans.csv" file
+- checking type of inputs
+- checking if there are any null values.
+- 2 columns which are mostly the same, are they equal tho?
+
+b/ data preprocessing
+- created functions for preprocessing in one go
+- no one-hot encoding was used --> labeled as numeric
+- created accounts with single number (BIN + Account number)
+- Node Features:
+    - average paid and received amount as feature (one-hot encoded directly into currency features)
+- Edge Features:
+    - As usual
+
+2. Model Architecture:
+
+- GAT Convolutional Model --> attention model
+    - utilizes masked self-attentional layers
+    - Arbitrary graphs are problematic as they aren't always interconnected fully and rigid
+    - GCN --> computes new node features based on input features and graph structure
+        - often calculated as the aggregation of neighborhood features
+        - activation function + **weighting factor of neighboring node to current node N**
+
+    -  So why use GAT?
+        - Self-learning and determination of weighting factor --> **not an aggregation but attention mechanism diverts "attention" to the most important neighbors** --> dynamically weight factors for connections
+        - more efficient --> computation & storage
+        - fixed n. of params
+        - localised
+        - specification of weights for different neighbors
+
+- Class GAT():
+    - edge attributes can be found
+
+
+
