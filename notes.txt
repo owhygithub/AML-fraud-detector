@@ -40,5 +40,21 @@ b/ data preprocessing
 - Class GAT():
     - edge attributes can be found
 
+- AMLtoGRAPH()
+    - preprocessing / get accounts / aggregations / edges retrieval / get node attributes / process all
+    - this part is largely finished from my side
 
 
+3. Data fed to the system:
+
+- Data( node features [4188, 7], **edge index [2, 4999]**, edge features [4999, 6], y labels [4188] ) 
+- what is edge index?
+    - size 2 tensor --> FROM [0] --> TO [0] etc... until 4999
+    - Showing each edge and the corresponding account numbers
+        - What are we doing then?
+            - created a mapping of all nodes and see if they are connected
+
+    - DIFFERENCE:
+        - edge index is has only 2 factors
+        - INDEXING is BASED ON number of EDGES
+        - LABELS are BASED ON number of NODES
