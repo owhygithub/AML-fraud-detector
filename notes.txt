@@ -58,3 +58,10 @@ b/ data preprocessing
         - edge index is has only 2 factors
         - INDEXING is BASED ON number of EDGES
         - LABELS are BASED ON number of NODES
+
+
+## PROBLEMS ##
+
+- There seems to be a problem where the adjacency matrix doesn't match the number of edges
+    - due to the fact that there are edges that go to the same nodes multiple times (unique only)
+    - # FIX ^^
