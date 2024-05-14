@@ -14,10 +14,10 @@
 # TODO CODE - Make model more extensive 
 # TODO CODE - Visualize prediction patterns and learning curve for existing model 
 # TODO CODE - Create testing stage and evaluation 
-# TODO THEORY - Watch GNN Theory 
-# TODO THEORY - Write up Introduction 
 
 # PLAN WEDNESDAY 
+# TODO THEORY - Watch GNN Theory 
+# TODO THEORY - Write up Introduction 
 # TODO THEORY - Understand Math Theory 
 # TODO THEORY - Write up methodology theory 
 # TODO THEORY - Write up Literature Review 
