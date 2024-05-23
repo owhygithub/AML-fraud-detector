@@ -301,7 +301,7 @@ class AMLDataPreprocessing:
             y=labels
         )
 
-        with open("graph_data.pickle", "wb") as f:
+        with open("graph.pickle", "wb") as f:
             pickle.dump({
                 'edges_features': edges_features,
                 'links': links,
