@@ -268,7 +268,7 @@ class AMLDataPreprocessing:
         edges_features = pd.concat([edges_features, pd.get_dummies(edges_features["second_position"],dtype='int')], axis=1, join='inner') # effectively adds actual currency to dummy variables/columns
         edges_features.drop(["Payment Format", "second_position"], axis=1, inplace=True) # drop the axiliary columns
         edges_features.head()
-        edges_features["Timestamp"] = pd.to_datetime(edges_features['Timestamp']).astype(int) // 10**9 # does not interpret time well... circular definition for months --> sinus calculations
+        edges_features["Timestamp"] = ((pd.to_datetime(edges_features['Timestamp']).astype(int) // 10**9) - 1661990000) // 10 # does not interpret time well... circular definition for months --> sinus calculations
         edges_features.head()
         y = edges_features.to_numpy()
 
