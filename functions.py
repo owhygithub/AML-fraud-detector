@@ -391,7 +391,7 @@ class AMLDataPreprocessing:
         
         return input_data, graph_full, x, y, labels, links, edges_amount, node_features, edges_features, time_closeness
 
-    def visualize_graph(self, links, edges_amount, limit=250, font_size=5):
+    def visualize_graph(self, links, edges_amount, limit=300, font_size=6):
         # DONE Creating smaller graph for visualization:
         # limit = 150
         # small_graph = create_graph(links, edges_amount, limit=limit)
@@ -445,7 +445,7 @@ class AMLDataPreprocessing:
         node_list = list(small_graph.nodes())
 
         # Draw nodes
-        nx.draw_networkx_nodes(small_graph, pos, nodelist=node_list, node_size=120, node_color='lightblue')
+        nx.draw_networkx_nodes(small_graph, pos, nodelist=node_list, node_size=200, node_color='lightblue')
 
         # Draw edges with label 1 in one color
         nx.draw_networkx_edges(small_graph, pos, edgelist=edges_label_1, width=1, edge_color='green', arrows=True, arrowstyle='->', arrowsize=20, label=None,)
