@@ -18,6 +18,59 @@ from torch_geometric.loader import DataLoader
 from torch_geometric.utils import negative_sampling, train_test_split_edges
 
 
+def normalize_time_diff(df):
+    # Replace NaN values with 0
+    # df['Time Dif'].fillna(0, inplace=True)
+    max_value = df['Time Dif'].max()
+    print(max_value)
+
+    epsilon = 50000 # epsilon value to increase threshold
+
+    na_value = max_value + 50000
+    new_max_value = na_value + epsilon # so that we are not multiplying by 0 in scoring function
+    df.fillna({'Time Dif': na_value}, inplace=True)
+    
+    # Normalize the time_diff column to be between 0 and 1
+    min_value = df['Time Dif'].min()
+    
+    # Avoid division by zero if all values are the same
+    if max_value - min_value != 0:
+        df['time_closeness'] = (df['Time Dif'] - min_value) / (new_max_value - min_value)
+    else:
+        df['time_closeness'] = 0
+    
+    # Invert the values so higher original values become lower normalized values
+    df['time_closeness'] = 1 - df['time_closeness']
+    
+    return df
+
+
+def create_time_diff_feature(df):
+    df_new = df.copy()
+
+    # print(df['Timestamp'].view('int64') // 10**9)
+    # df_new['timestamp_integer'] = df['Timestamp'].view('int64') // 10**9 - 1661990000 // 10
+    df_new['timestamp_integer'] = ((pd.to_datetime(df_new['Timestamp']).astype(int) // 10**9) - 1661990000) // 10
+    print(df_new)
+
+    # Ensure the DataFrame is sorted by account_from and timestamp
+    df_new = df_new.sort_values(by=['Account', 'timestamp_integer'])
+    
+    # Calculate the time difference between consecutive transactions for the same account_from
+    df_new['Last Payment'] = df_new.groupby('Account')['timestamp_integer'].shift(1)
+    df_new['Time Dif'] = df_new['timestamp_integer'] - df_new['Last Payment']
+    df_new = df_new.sort_index()
+    
+    df_new = normalize_time_diff(df_new)
+    print(df_new)
+    
+    # Select the relevant columns
+    result_df = df_new[['Account', 'timestamp_integer', 'Time Dif', 'time_closeness']]
+    time_closeness = torch.tensor(df_new['time_closeness'].values, dtype=torch.float32)
+    
+    return result_df, time_closeness
+
+
 def split_dataframe(df):
     timestamp_column = df.columns[0]  # Assuming Timestamp is the first column
     payment_columns = [col for col in df.columns if 'payment' in col]
@@ -204,7 +257,7 @@ class AMLDataPreprocessing:
         self.adjacency_matrix = None
         self.edge_index = None
         self.input_data = None
-
+        self.time_closeness = None
 
     def process_data(self):
         # BASICS
@@ -231,6 +284,13 @@ class AMLDataPreprocessing:
         print(sorted(self.data["Payment Currency"].unique()))
         print(sorted(self.data["Payment Format"].unique()))
         print(f"Number of unique accounts: {len(merged_unique_accounts)}")
+
+        # TIMESTAMP
+        time_df, time_closeness = create_time_diff_feature(self.data)
+        print("\nThis is the Time Difference: ")
+        print(time_df)
+        print(time_closeness)
+        print("\n")
 
         # NODE MATRIX
         unique_accounts = get_nodes(self.data)
@@ -328,21 +388,8 @@ class AMLDataPreprocessing:
             edge_attr=edges_features,
             y=labels
         )
-
-        with open("graph.pickle", "wb") as f:
-            pickle.dump({
-                'edges_features': edges_features,
-                'links': links,
-                'unique_accounts': unique_accounts,
-                'graph_full': graph_full,
-                'adjacency_matrix': adjacency_matrix,
-                'node_features': node_features,
-                'edge_index': edge_index,
-                'labels': labels,
-                'input_data': input_data
-            }, f)
-
-        return input_data, graph_full, x, y, labels, links, edges_amount, node_features, edges_features
+        
+        return input_data, graph_full, x, y, labels, links, edges_amount, node_features, edges_features, time_closeness
 
     def visualize_graph(self, links, edges_amount, limit=150):
         # DONE Creating smaller graph for visualization:
