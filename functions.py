@@ -391,41 +391,71 @@ class AMLDataPreprocessing:
         
         return input_data, graph_full, x, y, labels, links, edges_amount, node_features, edges_features, time_closeness
 
-    def visualize_graph(self, links, edges_amount, limit=150):
+    def visualize_graph(self, links, edges_amount, limit=250, font_size=5):
         # DONE Creating smaller graph for visualization:
         # limit = 150
+        # small_graph = create_graph(links, edges_amount, limit=limit)
+        # pos = nx.random_layout(small_graph) # shell, circular, spectral, spring, random,
+        # plt.figure(figsize=(25, 15))  # Increase figure size
+
+        # nx.draw(
+        #     small_graph,
+        #     pos,
+        #     node_size=300,  # Reduce node size for better visibility
+        #     with_labels=True,
+        #     font_size=7,
+        #     font_weight='bold',
+        #     node_color='lightblue',  # Specify node color
+        #     edge_color='gray',  # Specify edge color
+        #     width=1,  # Adjust edge width
+        #     arrows=True,  # Show arrows for directed edges
+        #     arrowstyle='->',  # Specify arrow style
+        #     arrowsize=20,  # Adjust arrow size
+        # )
+
+        # edge_labels = nx.get_edge_attributes(small_graph, 'label')
+        # nx.draw_networkx_edge_labels(
+        #     small_graph,
+        #     pos,
+        #     edge_labels=edge_labels,
+        #     label_pos=0.5,  # Adjust label position along edges
+        #     font_size=7,  # Adjust font size
+        #     font_color='green',  # Specify font color
+        # )
+
+        # if 'limit' in locals():
+        #     plt.title(f'Graph Visualization of first {limit} transactions')  # Add title to the plot
+        # else:
+        #     plt.title(f'Graph Visualization of all transactions')  # Add title to the plot
+        # plt.axis('off')  # Hide axis
+        # plt.show()
+
+        # Separate edges based on labels
         small_graph = create_graph(links, edges_amount, limit=limit)
-        pos = nx.random_layout(small_graph) # shell, circular, spectral, spring, random,
+        
+        # Define node positions
+        pos = nx.random_layout(small_graph)
+
         plt.figure(figsize=(25, 15))  # Increase figure size
+        
+        # Separate edges based on labels
+        edges_label_1 = [(u, v) for (u, v, d) in small_graph.edges(data=True) if d['label'] == 1]
+        edges_label_0 = [(u, v) for (u, v, d) in small_graph.edges(data=True) if d['label'] == 0]
 
-        nx.draw(
-            small_graph,
-            pos,
-            node_size=300,  # Reduce node size for better visibility
-            with_labels=True,
-            font_size=7,
-            font_weight='bold',
-            node_color='lightblue',  # Specify node color
-            edge_color='gray',  # Specify edge color
-            width=1,  # Adjust edge width
-            arrows=True,  # Show arrows for directed edges
-            arrowstyle='->',  # Specify arrow style
-            arrowsize=20,  # Adjust arrow size
-        )
+        node_list = list(small_graph.nodes())
 
-        edge_labels = nx.get_edge_attributes(small_graph, 'label')
-        nx.draw_networkx_edge_labels(
-            small_graph,
-            pos,
-            edge_labels=edge_labels,
-            label_pos=0.5,  # Adjust label position along edges
-            font_size=7,  # Adjust font size
-            font_color='green',  # Specify font color
-        )
+        # Draw nodes
+        nx.draw_networkx_nodes(small_graph, pos, nodelist=node_list, node_size=120, node_color='lightblue')
 
-        if 'limit' in locals():
-            plt.title(f'Graph Visualization of first {limit} transactions')  # Add title to the plot
-        else:
-            plt.title(f'Graph Visualization of all transactions')  # Add title to the plot
-        plt.axis('off')  # Hide axis
+        # Draw edges with label 1 in one color
+        nx.draw_networkx_edges(small_graph, pos, edgelist=edges_label_1, width=1, edge_color='green', arrows=True, arrowstyle='->', arrowsize=20, label=None,)
+
+        # Draw edges with label 0 in another color
+        nx.draw_networkx_edges(small_graph, pos, edgelist=edges_label_0, width=1, edge_color='red', arrows=True, arrowstyle='->', arrowsize=20, label=None,)
+
+        nx.draw_networkx_labels(small_graph, pos, font_size=font_size)
+
+        # Set plot title and axis
+        plt.title(f'Graph Visualization of first {limit} transactions')
+        plt.axis('off')
         plt.show()
