@@ -1,21 +1,11 @@
 # CLASSES and FUNCTIONS FOR DATASET
 
 import torch
-import time
-import pickle
 import random
-import datetime
-import numpy as np
 import pandas as pd
 import networkx as nx
-import torch.nn as nn
 import matplotlib.pyplot as plt
-import torch.optim as optim
-from pandas import Timestamp
 from torch_geometric.data import Data
-from torch_geometric.nn import GCNConv
-from torch_geometric.loader import DataLoader
-from torch_geometric.utils import negative_sampling, train_test_split_edges
 
 
 def normalize_time_diff(df):
