@@ -156,6 +156,7 @@ def get_longest_string_in_list(lst):
 
 
 def make_binary_fixed_length(binary_lists, res):
+    print("Running binary fixed length computations...")
     new_binary_list = []
     for x in binary_lists:
         if len(x) < len(res):
@@ -164,6 +165,7 @@ def make_binary_fixed_length(binary_lists, res):
             new_binary_list.append(x)
         else:
             new_binary_list.append(x)
+    print("Finished binary fixed length computations...")
     return new_binary_list
 
 
@@ -315,7 +317,7 @@ class AMLDataPreprocessing:
         longest_str, len_longest_str = get_longest_string_in_list(from_bank_binary)
         binary_lists = make_binary_fixed_length(binary_lists, longest_str)
         bin_vectors_df = pd.DataFrame(binary_lists, columns=[f'bin_{i}' for i in range(len(binary_lists[0]))])
-        from_bank_df = pd.DataFrame(from_bank_col)
+        # from_bank_df = pd.DataFrame(from_bank_col)
         accounts_df = pd.DataFrame(accounts_df)
         accounts_df_norm = normalize(accounts_df,0,1)
         node_features.reset_index(drop=True, inplace=True) # Ensure the DataFrame has the same number of rows as the original series
