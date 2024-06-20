@@ -21,7 +21,7 @@ adjacency_matrix = torch.from_numpy(nx.adjacency_matrix(graph_full).todense()).t
 
 print(f"input data: {input_data}")
 
-with open("Saved-Data/graph.pickle", "wb") as f:
+with open("/var/scratch/hwg580/Saved-Data/graph.pickle", "wb") as f:
     pickle.dump({
         'dataset': dataset,
         'visual': visual,

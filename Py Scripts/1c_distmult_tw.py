@@ -24,7 +24,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 import pickle
 
 # Specify the file path where the data is saved
-file_path = "Saved-Data/graph.pickle"
+file_path = "/var/scratch/hwg580/Saved-Data/graph.pickle"
 
 # Load the data from the file
 with open(file_path, "rb") as f:
