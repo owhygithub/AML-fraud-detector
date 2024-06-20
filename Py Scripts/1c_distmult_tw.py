@@ -179,16 +179,33 @@ class GNNModel(nn.Module):
             tail_indices.append(tail_index)
         
         return head_indices, tail_indices
-# Hyperparams
-learning_rate = 0.01
-out_channels = 25
-weight_decay = 5e-4  # L2 regularization factor
-epochs = 100
-dropout = 0.1 # dropout probability
+    
+# Get Hyperparams
+file_path = "Saved-Data/distmult_hyperparams.pickle"
 
-# annealing parameters
-annealing_rate = 0.001  # R ate at which to decrease the learning rate
-annealing_epochs = 10  # Number of epochs before decreasing learning rate
+# Load the data from the file
+with open(file_path, "rb") as f:
+    saved_data = pickle.load(f)
+
+# Now, you can access the saved data using the keys used during saving
+best_epochs = saved_data['best_epochs']
+best_lr = saved_data['best_lr']
+best_out_channels = saved_data['best_out_channels']
+best_weight_decay = saved_data['best_weight_decay']
+best_dropout = saved_data['best_dropout']
+best_annealing_rate = saved_data['best_annealing_rate']
+annealing_epochs = saved_data['annealing_epochs']
+
+# Hyperparams --- adjust to model best hyperparams
+learning_rate = best_lr
+out_channels = best_out_channels
+weight_decay = best_weight_decay  # L2 regularization factor
+epochs = best_epochs
+dropout = best_dropout # dropout probability
+
+# Annealing parameters
+annealing_rate = best_annealing_rate  # Rate at which to decrease the learning rate
+annealing_epochs = annealing_epochs  # Number of epochs before decreasing learning rate
 
 model = GNNModel(node_features=input_data.x.size(1), edge_features=input_data.edge_attr.size(1), out_channels=out_channels, dropout=dropout)
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)

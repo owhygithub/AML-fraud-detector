@@ -10,6 +10,7 @@ import csv
 import math
 import datetime
 import seaborn as sns
+from sklearn.model_selection import KFold
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 import torch
 import torch.nn as nn
@@ -165,11 +166,13 @@ class GNNModel(nn.Module):
             tail_indices.append(tail_index)
         
         return head_indices, tail_indices
+    
 # HYPERPARAMATER TUNING
 def assign_predictions(val_scores, threshold=0.5):
     # Assign labels based on a threshold
     predicted_labels = (val_scores >= threshold).float()
     return predicted_labels
+
 # Define the objective function for Optuna
 def objective(trial):
     # Suggest hyperparameters
@@ -308,6 +311,21 @@ best_weight_decay = best_params['weight_decay']
 best_dropout = best_params['dropout']
 best_annealing_rate = best_params['annealing_rate']
 annealing_epochs = best_params['annealing_epochs']
+
+# SAVE hyperparams for ComplEx
+
+with open("Saved-Data/complex_hyperparams.pickle", "wb") as f:
+    pickle.dump({
+        'best_epochs': best_epochs,
+        'best_lr': best_lr,
+        'best_out_channels': best_out_channels,
+        'best_weight_decay': best_weight_decay,
+        'best_dropout': best_dropout,
+        'best_annealing_rate': best_annealing_rate,
+        'annealing_epochs': annealing_epochs
+    }, f)
+
+
 # TRAINING
 # Hyperparams
 learning_rate = best_lr

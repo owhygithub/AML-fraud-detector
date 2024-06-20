@@ -261,7 +261,9 @@ class AMLDataPreprocessing:
 
     def process_data(self):
         # BASICS
+        print("Started reading csv...")
         self.data = pd.read_csv(self.filename)
+        print("Finished reading csv...")
         laundering_accounts = list(self.data[self.data["Is Laundering"]==1]["Account"])
         labels = self.data["Is Laundering"].to_numpy()
         merged_unique_accounts = pd.concat([self.data["Account"], self.data["Account.1"]]).unique()

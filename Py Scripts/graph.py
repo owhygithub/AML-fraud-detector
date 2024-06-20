@@ -3,12 +3,16 @@ import torch
 import networkx as nx
 from functions import AMLDataPreprocessing
 
+print("Import Successful...")
+
 dataset = "HI-Large_Trans"
 filename = f'/var/scratch/hwg580/{dataset}.csv'
 
 # Create an instance of the AMLDataPreprocessing class
+print("Initializing AML Data Preprocessing...")
 data_preprocessor = AMLDataPreprocessing(filename)
 # Process the data
+print("Processing data...")
 input_data, graph_full, x, y, labels, links, edges_amount, node_features, edges_features, time_closeness = data_preprocessor.process_data()
 print("Data Processed Successfully!")
 # Visualize

@@ -308,8 +308,21 @@ best_dropout = best_params['dropout']
 best_annealing_rate = best_params['annealing_rate']
 annealing_epochs = best_params['annealing_epochs']
 
-# TRAINING
+# SAVE hyperparams for DistMult
 
+with open("Saved-Data/distmult_hyperparams.pickle", "wb") as f:
+    pickle.dump({
+        'best_epochs': best_epochs,
+        'best_lr': best_lr,
+        'best_out_channels': best_out_channels,
+        'best_weight_decay': best_weight_decay,
+        'best_dropout': best_dropout,
+        'best_annealing_rate': best_annealing_rate,
+        'annealing_epochs': annealing_epochs
+    }, f)
+
+
+# TRAINING
 # Hyperparams
 learning_rate = best_lr
 out_channels = best_out_channels
