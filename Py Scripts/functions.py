@@ -36,6 +36,7 @@ def normalize_time_diff(df):
 
 
 def create_time_diff_feature(df):
+    print("Initiated Time Difference Calculation...")
     df_new = df.copy()
 
     # print(df['Timestamp'].view('int64') // 10**9)
@@ -51,12 +52,14 @@ def create_time_diff_feature(df):
     df_new['Time Dif'] = df_new['timestamp_integer'] - df_new['Last Payment']
     df_new = df_new.sort_index()
     
+    print("Normalizing Time Difference Calculations...")
     df_new = normalize_time_diff(df_new)
     # print(df_new)
     
     # Select the relevant columns
     result_df = df_new[['Account', 'timestamp_integer', 'Time Dif', 'time_closeness']]
     time_closeness = torch.tensor(df_new['time_closeness'].values, dtype=torch.float32)
+    print("Time Difference Calculations Completed")
     
     return result_df, time_closeness
 

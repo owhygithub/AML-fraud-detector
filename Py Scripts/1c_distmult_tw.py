@@ -551,40 +551,40 @@ log_experiment(model_name=model_name, learning_rate=learning_rate, out_channels=
 torch.save({'test_labels': test_labels}, f'Results/{model_name}/labels.pt')
 torch.save({'predictions': test_predictions}, f'Results/{model_name}/predictions_{model_name}_{random.randint(1, 100)}.pt')
 # Save in RDF format
-import gzip
-import torch
+# import gzip
+# import torch
 
-def save_embeddings_as_triples(edge_index, node_embeddings, edge_embeddings, file_path):
-    with gzip.open(file_path, 'wt') as f:
-        for i in range(edge_index.size(1)):
-            head_index = edge_index[0, i].item()
-            tail_index = edge_index[1, i].item()
-            head_uri = f"http://example.org/node/{head_index}"
-            tail_uri = f"http://example.org/node/{tail_index}"
-            relation_uri = f"http://example.org/relation/{i}"
+# def save_embeddings_as_triples(edge_index, node_embeddings, edge_embeddings, file_path):
+#     with gzip.open(file_path, 'wt') as f:
+#         for i in range(edge_index.size(1)):
+#             head_index = edge_index[0, i].item()
+#             tail_index = edge_index[1, i].item()
+#             head_uri = f"http://example.org/node/{head_index}"
+#             tail_uri = f"http://example.org/node/{tail_index}"
+#             relation_uri = f"http://example.org/relation/{i}"
 
-            # Write connectedTo triple
-            f.write(f'<{head_uri}> <http://example.org/ontology#connectedTo> <{tail_uri}>.\n')
+#             # Write connectedTo triple
+#             f.write(f'<{head_uri}> <http://example.org/ontology#connectedTo> <{tail_uri}>.\n')
             
-            # Write head node embedding triple
-            head_embedding = node_embeddings[head_index].numpy()
-            head_str = ' '.join(map(str, head_embedding))
-            f.write(f'<{head_uri}> <http://example.org/ontology#hasEmbedding> "{head_str}."\n')
+#             # Write head node embedding triple
+#             head_embedding = node_embeddings[head_index].numpy()
+#             head_str = ' '.join(map(str, head_embedding))
+#             f.write(f'<{head_uri}> <http://example.org/ontology#hasEmbedding> "{head_str}."\n')
             
-            # Write tail node embedding triple
-            tail_embedding = node_embeddings[tail_index].numpy()
-            tail_str = ' '.join(map(str, tail_embedding))
-            f.write(f'<{tail_uri}> <http://example.org/ontology#hasEmbedding> "{tail_str}".\n')
+#             # Write tail node embedding triple
+#             tail_embedding = node_embeddings[tail_index].numpy()
+#             tail_str = ' '.join(map(str, tail_embedding))
+#             f.write(f'<{tail_uri}> <http://example.org/ontology#hasEmbedding> "{tail_str}".\n')
             
-            # Write edge embedding triple
-            relation_embedding = edge_embeddings[i].numpy()
-            relation_str = ' '.join(map(str, relation_embedding))
-            f.write(f'<{relation_uri}> <http://example.org/ontology#hasEmbedding> "{relation_str}".\n')
+#             # Write edge embedding triple
+#             relation_embedding = edge_embeddings[i].numpy()
+#             relation_str = ' '.join(map(str, relation_embedding))
+#             f.write(f'<{relation_uri}> <http://example.org/ontology#hasEmbedding> "{relation_str}".\n')
 
-edge_index_train_triples = input_data.edge_index[:, train_mask]
+# edge_index_train_triples = input_data.edge_index[:, train_mask]
 
-# Example usage after training
-x_embeddings = torch.tensor(all_x_embeddings[-1])  # Use the last epoch's embeddings
-e_embeddings = torch.tensor(all_e_embeddings[-1])  # Use the last epoch's embeddings
+# # Example usage after training
+# x_embeddings = torch.tensor(all_x_embeddings[-1])  # Use the last epoch's embeddings
+# e_embeddings = torch.tensor(all_e_embeddings[-1])  # Use the last epoch's embeddings
 
-save_embeddings_as_triples(edge_index_train_triples, x_embeddings, e_embeddings, f"Saved-Data/rdf_triples_{model_name}.nt.gz")
+# save_embeddings_as_triples(edge_index_train_triples, x_embeddings, e_embeddings, f"Saved-Data/rdf_triples_{model_name}.nt.gz")
