@@ -4,9 +4,8 @@ import networkx as nx
 from functions import AMLDataPreprocessing
 import torch
 
-dataset = "HI-Small_Trans"
-
-filename = f'/Users/owhy/Documents/Datasets/{dataset}.csv'
+dataset = "HI-Large_Trans"
+filename = f'/var/scratch/hwg580/{dataset}.csv'
 
 # Create an instance of the AMLDataPreprocessing class
 data_preprocessor = AMLDataPreprocessing(filename)
