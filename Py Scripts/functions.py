@@ -347,6 +347,7 @@ class AMLDataPreprocessing:
         a = split_into_vectors(edges_amount) # INEFFICIENT !!!! # INEFFICIENT !!!!# INEFFICIENT !!!!# INEFFICIENT !!!!# INEFFICIENT !!!!
         new_payment_list = encode_payment_amount(a, max_len, min_len) # INEFFICIENT !!!! # INEFFICIENT !!!!# INEFFICIENT !!!!# INEFFICIENT !!!!# INEFFICIENT !!!!
         new_payment_list = nested_list_int = [[int(item) for item in sublist] for sublist in new_payment_list]
+        print("Payment Vector...")
         payment_vectors_df = pd.DataFrame(new_payment_list, columns=[f'payment_{i}' for i in range(len(new_payment_list[0]))])
         edges_features = pd.concat([edges_df, payment_vectors_df], axis=1)
         edges_features.drop("Amount Paid", axis='columns')
@@ -369,26 +370,33 @@ class AMLDataPreprocessing:
         y = edges_features.to_numpy()
 
         # CREATE GRAPH:
+        print("create graph")
         graph_full = create_graph(links, edges_amount)
-
+        print("Adjacency matrix creating...")
         adjacency_matrix = nx.adjacency_matrix(graph_full)
-
+        print("Unique accounts resetting...")
         accounts = unique_accounts.reset_index(drop=True)
         accounts['ID'] = accounts.index
+        print("Mapping...")
         mapping_dict = dict(zip(accounts['Accounts'], accounts['ID']))
         self.data['From'] = self.data['Account'].map(mapping_dict)
         self.data['To'] = self.data['Account.1'].map(mapping_dict)
         self.data = self.data.drop(['Account', 'Account.1', 'From Bank', 'To Bank'], axis=1)
-
+        print("Edge indexing...")
         edge_index = torch.stack([torch.from_numpy(self.data['From'].values), torch.from_numpy(self.data['To'].values)], dim=0)
+        print("Adjacency Matrix...")
         adjacency_matrix = adjacency_matrix.todense()
         adjacency_matrix = torch.from_numpy(adjacency_matrix).to(torch.float)
-        num_ones = (adjacency_matrix == 1).sum().item()
+        # num_ones = (adjacency_matrix == 1).sum().item()
+        print("Node Features...")
         node_features = node_features.to_numpy()
-        edges_features = edges_features.to_numpy()
         node_features = torch.from_numpy(node_features).to(torch.float)
+        print("Edge Features...")
+        edges_features = edges_features.to_numpy()
         edges_features = torch.from_numpy(edges_features).to(torch.float)
+        print("Labels...")
         labels = torch.from_numpy(labels).to(torch.float)
+        print("Setting Input Data...")
         input_data = Data(
             x=node_features,
             edge_index=edge_index,
