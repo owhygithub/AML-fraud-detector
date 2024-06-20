@@ -2,7 +2,6 @@ import pickle
 import torch
 import networkx as nx
 from functions import AMLDataPreprocessing
-import torch
 
 dataset = "HI-Large_Trans"
 filename = f'/var/scratch/hwg580/{dataset}.csv'

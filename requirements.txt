@@ -1,4 +1,5 @@
 torch
+torch_sparse
 pandas
 networkx
 matplotlib
