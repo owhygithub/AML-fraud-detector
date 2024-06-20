@@ -51,7 +51,7 @@ def create_time_diff_feature(df):
     # print(df['Timestamp'].view('int64') // 10**9)
     # df_new['timestamp_integer'] = df['Timestamp'].view('int64') // 10**9 - 1661990000 // 10
     df_new['timestamp_integer'] = ((pd.to_datetime(df_new['Timestamp']).astype(int) // 10**9) - 1661990000) // 10
-    print(df_new)
+    # print(df_new)
 
     # Ensure the DataFrame is sorted by account_from and timestamp
     df_new = df_new.sort_values(by=['Account', 'timestamp_integer'])
@@ -62,7 +62,7 @@ def create_time_diff_feature(df):
     df_new = df_new.sort_index()
     
     df_new = normalize_time_diff(df_new)
-    print(df_new)
+    # print(df_new)
     
     # Select the relevant columns
     result_df = df_new[['Account', 'timestamp_integer', 'Time Dif', 'time_closeness']]
@@ -72,6 +72,7 @@ def create_time_diff_feature(df):
 
 
 def split_dataframe(df):
+    print("spitting dataframe...")
     timestamp_column = df.columns[0]  # Assuming Timestamp is the first column
     payment_columns = [col for col in df.columns if 'payment' in col]
 
@@ -80,7 +81,7 @@ def split_dataframe(df):
 
     # Select columns for the second DataFrame
     second_df = df.drop(columns=[timestamp_column] + payment_columns)
-
+    print("\tdone...")
     return first_df, second_df
 
 
@@ -109,6 +110,7 @@ def one_hot_encoding(unique_accounts, column):
 
 
 def normalize(table, new_min=0, new_max=1):
+    print("normalizing table...")
     # Check if the input table has only one column
     if len(table.columns) == 1:
         normalized_df = ((table - table.min()) / (table.max() - table.min())) * (new_max - new_min) + new_min
@@ -128,6 +130,7 @@ def normalize(table, new_min=0, new_max=1):
                 normalized_column = ((column_data - column_data.min()) / (column_data.max() - column_data.min())) * (new_max - new_min) + new_min
                 normalized_df[f'col_{column_index}'] = normalized_column
             column_index += 1
+        print("\tdone...")
         return normalized_df
 
 
@@ -172,6 +175,7 @@ def make_binary_fixed_length(binary_lists, res):
 
 
 def count_unused_decimals(number):
+    print("counting unused decimals...")
     # Convert number to string to iterate through digits
     num_str = str(number)
     count = 0
@@ -187,11 +191,12 @@ def count_unused_decimals(number):
 
     # Remove trailing zeroes from the number
     num_str = num_str.rstrip('0')
-
+    print("\tdone...")
     return num_str, count
 
 
 def split_into_vectors(table):
+    print("splitting into vectors...")
     lists = []
     for binary in table:
         binary = float(binary)
@@ -203,10 +208,12 @@ def split_into_vectors(table):
             else:
                 decimal_repr.append(bit)
         lists.append(decimal_repr)
+    print("\tdone...")
     return lists
 
 
 def encode_payment_amount(df_col, max_len, min_len):
+    print("encoding payment amount...")
     new_payment_list = []
     for x in df_col:
         # print(x)
@@ -226,10 +233,12 @@ def encode_payment_amount(df_col, max_len, min_len):
         else:
             new_payment_list.append(x)
         x.remove('.')
+    print("\tdone...")
     return new_payment_list
 
 
 def create_graph(edge_connections, edges_amount, limit=None):
+    print("creating graph...")
     graph = nx.Graph()
     if limit is None:
         for i in range(len(edge_connections)):
@@ -241,7 +250,8 @@ def create_graph(edge_connections, edges_amount, limit=None):
             u = edge_connections[i].get("source")
             v = edge_connections[i].get("destination")
             graph.add_edge(u,v,label=edges_amount[i])
-    print(graph.edges(data=True))
+    # print(graph.edges(data=True))
+    print("\tdone...")
     return graph
 
 
@@ -277,7 +287,7 @@ class AMLDataPreprocessing:
         print("Fraudulent or Not? - Y labels")
         print(f"Number of fraudulent transactions - {len(self.data[self.data['Is Laundering']==1])}")
         print(f"Number of non-fraudulent transactions - {len(self.data[self.data['Is Laundering']==0])}")
-        print(f"Laundering Accounts - {laundering_accounts}")
+        # print(f"Laundering Accounts - {laundering_accounts}")
         print("Are Amount Paid entirely equal to Amount Received?\n - " + str(self.data["Amount Paid"].equals(self.data["Amount Received"])))
         print("Are Currency Received entirely equal to Currency Paid?\n - " + str(self.data["Payment Currency"].equals(self.data["Receiving Currency"])))
         print(sorted(self.data["Receiving Currency"].unique()))
@@ -287,10 +297,10 @@ class AMLDataPreprocessing:
 
         # TIMESTAMP
         time_df, time_closeness = create_time_diff_feature(self.data)
-        print("\nThis is the Time Difference: ")
-        print(time_df)
-        print(time_closeness)
-        print("\n")
+        # print("\nThis is the Time Difference: ")
+        # print(time_df)
+        # print(time_closeness)
+        # print("\n")
 
         # NODE MATRIX
         unique_accounts = get_nodes(self.data)
@@ -388,10 +398,10 @@ class AMLDataPreprocessing:
             edge_attr=edges_features,
             y=labels
         )
-        
+        print("Data Processing Function completed...")
         return input_data, graph_full, x, y, labels, links, edges_amount, node_features, edges_features, time_closeness
 
-    def visualize_graph(self, links, edges_amount, limit=300, font_size=6):
+    def visualize_graph(self, links, edges_amount, limit=250, font_size=6):
         # DONE Creating smaller graph for visualization:
         # limit = 150
         # small_graph = create_graph(links, edges_amount, limit=limit)
