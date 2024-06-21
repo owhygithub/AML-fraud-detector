@@ -1,3 +1,5 @@
+# TODO k-fold cross validation --> move from hyperparam tuning to Training Loop ( for better validation representation --> getting best model --> use for testing )
+
 model_name = "DisMult"
 
 import pickle

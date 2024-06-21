@@ -29,7 +29,7 @@ print("Adjacency matrix created...\n")
 # Convert the adjacency matrix to a PyTorch tensor
 print("Adjacency matrix tensor...")
 # Save the sparse adjacency matrix to a file
-save_npz("/var/scratch/hwg580/Saved-Data/adjacency_matrix.npz", adjacency_matrix)
+save_npz("/var/scratch/hwg580/adjacency_matrix.npz", adjacency_matrix)
 
 # Convert the adjacency matrix to COO format and then to a PyTorch sparse tensor
 coo = coo_matrix(adjacency_matrix)
