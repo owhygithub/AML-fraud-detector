@@ -43,7 +43,7 @@ print("Adjacency matrix tensor created...")
 
 print(f"input data: {input_data}")
 
-with open("/var/scratch/hwg580/Saved-Data/graph.pickle", "wb") as f:
+with open("/var/scratch/hwg580/graph.pickle", "wb") as f:
     pickle.dump({
         'dataset': dataset,
         'visual': visual,
