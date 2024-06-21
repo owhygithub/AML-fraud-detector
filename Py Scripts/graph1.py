@@ -22,9 +22,16 @@ print("Data Processed Successfully!")
 visual = data_preprocessor.visualize_graph(links, labels)
 
 # Convert to a boolean adjacency matrix
+print("Adjacency matrix...")
 adjacency_matrix = nx.adjacency_matrix(graph_full).astype(bool)
-print(adjacency_matrix)
-print(f"Size of adjacency_matrix: {adjacency_matrix.size()}")
+print("Adjacency matrix created...\n")
+
+# Convert the adjacency matrix to a PyTorch tensor
+print("Adjacency matrix tensor...")
+adjacency_tensor = torch.tensor(adjacency_matrix.todense(), dtype=torch.float32)
+print("Adjacency matrix tensor created...")
+print(adjacency_tensor)
+print(f"Size of adjacency_tensor: {adjacency_tensor.size()}")
 
 print(f"input data: {input_data}")
 
