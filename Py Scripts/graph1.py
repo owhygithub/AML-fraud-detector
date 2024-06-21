@@ -1,7 +1,7 @@
 import pickle
 import torch
 import networkx as nx
-from functions import AMLDataPreprocessing
+from functions1 import AMLDataPreprocessing
 
 print("Import Successful...")
 
