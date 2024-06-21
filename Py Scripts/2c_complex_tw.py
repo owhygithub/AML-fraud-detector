@@ -42,8 +42,6 @@ x = saved_data['x']
 y = saved_data['y']
 input_data = saved_data['input_data']
 time_closeness = saved_data['time_closeness']
-edges_features
-input_data
 input_data.edge_attr.size()
 labels.size()
 input_data.x.size()

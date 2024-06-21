@@ -44,7 +44,6 @@ node_features = saved_data['node_features']
 x = saved_data['x']
 y = saved_data['y']
 input_data = saved_data['input_data']
-input_data
 input_data.edge_attr.size()
 labels.size()
 input_data.x.size()
@@ -60,7 +59,6 @@ val_indices, test_indices = train_test_split(test_val_indices, test_size=0.5, st
 train_mask = torch.tensor([i in train_indices for i in range(num_edges)], dtype=torch.bool)
 val_mask = torch.tensor([i in val_indices for i in range(num_edges)], dtype=torch.bool)
 test_mask = torch.tensor([i in test_indices for i in range(num_edges)], dtype=torch.bool)
-val_mask
 # GRAPH NEURAL NETWORKS
 class GNNLayer(MessagePassing):
     def __init__(self, node_features, edge_features, out_channels, dropout):

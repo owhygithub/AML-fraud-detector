@@ -371,9 +371,7 @@ class AMLDataPreprocessing:
 
         # CREATE GRAPH:
         print("create graph")
-        graph_full = create_graph(links, edges_amount)
-        print("Adjacency matrix creating...")
-        adjacency_matrix = nx.adjacency_matrix(graph_full)
+        self.graph_full = create_graph(links, edges_amount)
         print("Unique accounts resetting...")
         accounts = unique_accounts.reset_index(drop=True)
         accounts['ID'] = accounts.index
@@ -387,10 +385,8 @@ class AMLDataPreprocessing:
         self.data = self.data.drop(['Account', 'Account.1', 'From Bank', 'To Bank'], axis=1)
         print("Edge indexing...")
         edge_index = torch.stack([torch.from_numpy(self.data['From'].values), torch.from_numpy(self.data['To'].values)], dim=0)
-        print("Adjacency Matrix...")
-        adjacency_matrix = adjacency_matrix.todense()
-        adjacency_matrix = torch.from_numpy(adjacency_matrix).to(torch.float)
-        # num_ones = (adjacency_matrix == 1).sum().item()
+        # print("Adjacency Matrix...")
+        # self.adjacency_matrix = nx.adjacency_matrix(self.graph_full)
         print("Node Features...")
         node_features = node_features.to_numpy()
         node_features = torch.from_numpy(node_features).to(torch.float)
@@ -407,7 +403,8 @@ class AMLDataPreprocessing:
             y=labels
         )
         print("Data Processing Function completed...")
-        return input_data, graph_full, x, y, labels, links, edges_amount, node_features, edges_features, time_closeness
+        return input_data, self.graph_full, x, y, labels, links, edges_amount, node_features, edges_features, time_closeness
+
 
     def visualize_graph(self, links, edges_amount, limit=250, font_size=6):
         # DONE Creating smaller graph for visualization:
