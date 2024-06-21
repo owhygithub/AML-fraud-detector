@@ -2,6 +2,7 @@ import pickle
 import torch
 import networkx as nx
 from functions1 import AMLDataPreprocessing
+from scipy.sparse import coo_matrix
 
 print("Import Successful...")
 
@@ -19,11 +20,15 @@ print("Data Processed Successfully!")
 # Visualize
 visual = data_preprocessor.visualize_graph(links, labels)
 
-# Use a sparse adjacency matrix
+# Convert to a sparse adjacency matrix
 adjacency_matrix = nx.adjacency_matrix(graph_full)
-adjacency_matrix = torch.sparse.FloatTensor(
-    torch.LongTensor([adjacency_matrix.row.tolist(), adjacency_matrix.col.tolist()]),
-    torch.FloatTensor(adjacency_matrix.data.astype(float))
+adjacency_matrix_coo = coo_matrix(adjacency_matrix)
+
+# Create a sparse tensor from the coo_matrix
+adjacency_matrix_sparse = torch.sparse.FloatTensor(
+    torch.LongTensor([adjacency_matrix_coo.row, adjacency_matrix_coo.col]),
+    torch.FloatTensor(adjacency_matrix_coo.data),
+    torch.Size(adjacency_matrix_coo.shape)
 )
 
 print(f"Size of adjacency_matrix: {adjacency_matrix.size()}")
