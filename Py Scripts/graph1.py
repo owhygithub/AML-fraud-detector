@@ -24,9 +24,13 @@ visual = data_preprocessor.visualize_graph(links, labels)
 adjacency_matrix = nx.adjacency_matrix(graph_full)
 adjacency_matrix_coo = coo_matrix(adjacency_matrix)
 
+# Convert row and col to numpy arrays
+row = np.array(adjacency_matrix_coo.row)
+col = np.array(adjacency_matrix_coo.col)
+
 # Create a sparse tensor from the coo_matrix
 adjacency_matrix_sparse = torch.sparse.FloatTensor(
-    torch.LongTensor([adjacency_matrix_coo.row, adjacency_matrix_coo.col]),
+    torch.LongTensor([row, col]),
     torch.FloatTensor(adjacency_matrix_coo.data),
     torch.Size(adjacency_matrix_coo.shape)
 )
