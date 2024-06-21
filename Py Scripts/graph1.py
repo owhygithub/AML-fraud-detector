@@ -3,7 +3,7 @@ import torch
 import numpy as np
 import networkx as nx
 from functions1 import AMLDataPreprocessing
-from scipy.sparse import coo_matrix
+from scipy.sparse import coo_matrix, save_npz
 
 print("Import Successful...")
 
@@ -28,10 +28,18 @@ print("Adjacency matrix created...\n")
 
 # Convert the adjacency matrix to a PyTorch tensor
 print("Adjacency matrix tensor...")
-adjacency_tensor = torch.tensor(adjacency_matrix.todense(), dtype=torch.float32)
-print("Adjacency matrix tensor created...")
+# Save the sparse adjacency matrix to a file
+save_npz("/var/scratch/hwg580/Saved-Data/adjacency_matrix.npz", adjacency_matrix)
+
+# Convert the adjacency matrix to COO format and then to a PyTorch sparse tensor
+coo = coo_matrix(adjacency_matrix)
+values = torch.tensor(coo.data, dtype=torch.float32)
+indices = torch.tensor([coo.row, coo.col], dtype=torch.int64)
+adjacency_tensor = torch.sparse_coo_tensor(indices, values, coo.shape, dtype=torch.float32)
 print(adjacency_tensor)
 print(f"Size of adjacency_tensor: {adjacency_tensor.size()}")
+
+print("Adjacency matrix tensor created...")
 
 print(f"input data: {input_data}")
 
