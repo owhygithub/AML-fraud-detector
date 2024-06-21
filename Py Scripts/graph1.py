@@ -21,21 +21,9 @@ print("Data Processed Successfully!")
 # Visualize
 visual = data_preprocessor.visualize_graph(links, labels)
 
-# Convert to a sparse adjacency matrix
-adjacency_matrix = nx.adjacency_matrix(graph_full)
-adjacency_matrix_coo = coo_matrix(adjacency_matrix)
-
-# Convert row and col to numpy arrays
-row = np.array(adjacency_matrix_coo.row)
-col = np.array(adjacency_matrix_coo.col)
-
-# Create a sparse tensor from the coo_matrix
-adjacency_matrix_sparse = torch.sparse.FloatTensor(
-    torch.LongTensor([row, col]),
-    torch.FloatTensor(adjacency_matrix_coo.data),
-    torch.Size(adjacency_matrix_coo.shape)
-)
-
+# Convert to a boolean adjacency matrix
+adjacency_matrix = nx.adjacency_matrix(graph_full).astype(bool)
+print(adjacency_matrix)
 print(f"Size of adjacency_matrix: {adjacency_matrix.size()}")
 
 print(f"input data: {input_data}")
