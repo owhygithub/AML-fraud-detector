@@ -5,7 +5,7 @@ from functions import AMLDataPreprocessing
 
 print("Import Successful...")
 
-dataset = "HI-Medium_Trans"
+dataset = "HI-Small_Trans"
 filename = f'/var/scratch/hwg580/{dataset}.csv'
 
 # Create an instance of the AMLDataPreprocessing class
