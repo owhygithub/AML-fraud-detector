@@ -428,11 +428,12 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
 
         sorted_indices = torch.argsort(val_scores, descending=True)
 
-        print(f"accuracy, precision, recall, f1, mrr...")
+        print(f"Accuracy, precision, recall, f1...")
         val_accuracy = accuracy_score(val_labels, val_predictions)
         val_precision = precision_score(val_labels, val_predictions)
         val_recall = recall_score(val_labels, val_predictions)
         val_f1 = f1_score(val_labels, val_predictions)
+        print(f"Calculating MRR...")
         val_mrr = calculate_mrr(torch.argsort(val_scores, descending=True), val_labels)
 
         print(f"\nEpoch {epoch}, Training Loss: {loss:.4f}, Validation Loss: {val_loss:.4f}")
