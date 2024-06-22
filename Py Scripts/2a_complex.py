@@ -138,14 +138,19 @@ class GNNModel(nn.Module):
         tails = axw[tail_indices]
 
         # Expand edge features for each head-tail pair
-        expanded_ew = ew.unsqueeze(0).expand_as(heads)
+        print(heads.size())
+        print(ew.size())
+        print(tails.size())
+
+        print(torch.conj(tails).size)
 
         # Perform element-wise multiplication
-        complex_product = heads * expanded_ew * torch.conj(tails)
+        complex_product = heads * ew * torch.conj(tails)
 
         # Sum along the appropriate dimension (dim=0 or dim=-1 based on your requirement)
-        raw_scores = torch.real(complex_product)  # Sum along the last dimension
-
+        raw_scores = torch.real(torch.sum(complex_product, dim=0))  # Sum along the last dimension
+        print(raw_scores)
+        
         # Optionally apply sigmoid activation (if raw_scores are logits)
         normalized_scores = torch.sigmoid(raw_scores)
 
