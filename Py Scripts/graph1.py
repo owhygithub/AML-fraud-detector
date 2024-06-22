@@ -51,6 +51,7 @@ with open("/var/scratch/hwg580/graph.pickle", "wb") as f:
         'links': links,
         'graph_full': graph_full,
         'adjacency_matrix': adjacency_matrix,
+        'adjacency_tensor': adjacency_tensor,
         'node_features': node_features,
         'labels': labels,
         'input_data': input_data,

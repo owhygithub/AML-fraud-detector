@@ -2,6 +2,7 @@
 
 model_name = "DisMult-T"
 
+import numpy as np
 import random
 import pickle
 import os
@@ -23,7 +24,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 import pickle
 
 # Specify the file path where the data is saved
-file_path = "/var/scratch/hwg580/Saved-Data/graph.pickle"
+file_path = "/var/scratch/hwg580/graph.pickle"
 
 # Load the data from the file
 with open(file_path, "rb") as f:
@@ -42,11 +43,7 @@ x = saved_data['x']
 y = saved_data['y']
 input_data = saved_data['input_data']
 time_closeness = saved_data['time_closeness']
-input_data.edge_attr.size()
-labels.size()
-input_data.x.size()
-node_features.size()
-adjacency_matrix.size()
+adjacency_tensor = saved_data['adjacency_tensor']
 
 
 # Split the nodes into training, validation, and test sets
@@ -60,6 +57,7 @@ train_mask = torch.tensor([i in train_indices for i in range(num_edges)], dtype=
 val_mask = torch.tensor([i in val_indices for i in range(num_edges)], dtype=torch.bool)
 test_mask = torch.tensor([i in test_indices for i in range(num_edges)], dtype=torch.bool)
 val_mask
+
 # GRAPH NEURAL NETWORKS
 class GNNLayer(MessagePassing):
     def __init__(self, node_features, edge_features, out_channels, dropout):
@@ -80,10 +78,10 @@ class GNNLayer(MessagePassing):
         
     def forward(self, x, edge_index, edge_attr):
         # AXW0 + EW1
-        global adjacency_matrix
+        global adjacency_tensor
         self.adjacency_matrix = adjacency_matrix
         
-        axw = torch.matmul(self.adjacency_matrix, x) @ self.weight_node
+        axw = torch.sparse.mm(self.adjacency_matrix, x) @ self.weight_node
         ew = torch.matmul(edge_attr, self.weight_edge)
 
         axw = self.dropout(axw)  # Apply dropout to node features
@@ -93,6 +91,7 @@ class GNNLayer(MessagePassing):
 
     def update(self, aggr_out):
         return aggr_out
+    
 class GNNModel(nn.Module):
     def __init__(self, node_features, edge_features, out_channels, dropout):
         super(GNNModel, self).__init__()
@@ -169,7 +168,7 @@ class GNNModel(nn.Module):
         return head_indices, tail_indices
 
 # Get Hyperparams
-file_path = "Saved-Data/distmult_hyperparams.pickle"
+file_path = "/var/scratch/hwg580/distmult_hyperparams.pickle"
 
 # Load the data from the file
 with open(file_path, "rb") as f:
@@ -329,7 +328,7 @@ for epoch in range(epochs):
         best_val_loss = val_loss
         patience_counter = 0
         # Save the model if validation loss improves
-        torch.save(model.state_dict(), f'Saved-Data/{model_name}.pt')
+        torch.save(model.state_dict(), f'/var/scratch/hwg580/{model_name}.pt')
     else:
         patience_counter += 1
         if patience_counter > patience:
