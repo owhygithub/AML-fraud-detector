@@ -60,12 +60,10 @@ val_indices, test_indices = train_test_split(test_val_indices, test_size=0.5, st
 print("Creating mask data...")
 # Convert indices to a tensor
 indices = torch.arange(num_edges)
-
 # Create masks efficiently using torch.zeros_like and indexing
 train_mask = torch.zeros_like(indices, dtype=torch.bool)
 val_mask = torch.zeros_like(indices, dtype=torch.bool)
 test_mask = torch.zeros_like(indices, dtype=torch.bool)
-
 # Set True at indices present in train_indices, val_indices, test_indices
 train_mask[train_indices] = True
 val_mask[val_indices] = True
