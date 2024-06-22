@@ -32,9 +32,9 @@ print("Combine fraudulent and connected non-fraudulent transactions ...")
 combined_indices = pd.Index(np.concatenate([fraud_indices, connected_non_fraud_indices]))
 
 # Sample from combined indices to create a balanced dataset
-print("Ensure the final dataset size is between 3 to 5 million transactions ...")
+print("Ensure the final dataset size is between 1.5 and 2 million transactions ...")
 np.random.seed(42)  # Set random seed for reproducibility
-final_size = min(max(len(combined_indices), 3000000), 5000000)
+final_size = min(max(len(combined_indices), 1500000), 2000000)
 sampled_indices = np.random.choice(combined_indices, size=final_size, replace=False)
 
 # Create balanced dataset
