@@ -8,52 +8,6 @@ print("Loading...")
 filename = '/var/scratch/hwg580/HI-Large_Trans.csv'
 data = pd.read_csv(filename, parse_dates=['Timestamp'], infer_datetime_format=True)
 
-# Reduce the dataset size by removing 66% of the data
-print("Reducing dataset size...")
-data = data.sample(frac=0.33, random_state=42).reset_index(drop=True)
-
-# Identify fraudulent transactions and connected non-fraudulent transactions efficiently
-print("Creating balanced dataset...")
-
-# Find fraudulent transactions indices
-print("Find fraudulent transactions indices ...")
-fraud_indices = data[data['Is Laundering'] == 1].index
-
-# Find connected non-fraudulent transactions using a set for faster lookup
-print("Identify non-fraudulent transactions connected to fraudulent ones ...")
-connected_accounts = list(set(data.loc[fraud_indices, 'Account']).union(set(data.loc[fraud_indices, 'To Bank'])))
-
-# Filter non-fraudulent transactions that are connected to fraudulent ones
-print("Filter non-fraudulent transactions that are connected to fraudulent ones ...")
-connected_non_fraud_indices = data[(data['Is Laundering'] == 0) & (data['Account'].isin(connected_accounts) | data['To Bank'].isin(connected_accounts))].index
-
-# Combine indices of fraudulent and connected non-fraudulent transactions
-print("Combine fraudulent and connected non-fraudulent transactions ...")
-combined_indices = pd.Index(np.concatenate([fraud_indices, connected_non_fraud_indices]))
-
-# Sample from combined indices to create a balanced dataset
-print("Ensure the final dataset size is between 3 to 5 million transactions ...")
-np.random.seed(42)  # Set random seed for reproducibility
-final_size = min(max(len(combined_indices), 1500000), 2000000)
-sampled_indices = np.random.choice(combined_indices, size=final_size, replace=False)
-
-# Create balanced dataset
-balanced_data = data.loc[sampled_indices].reset_index(drop=True)
-
-# Ensure 10% of the dataset is fraudulent
-print("Ensure 10 percent of the dataset is fraudulent ...")
-fraud_count = int(final_size * 0.1)
-fraudulent_sample = balanced_data[balanced_data['Is Laundering'] == 1].sample(n=fraud_count, random_state=42)
-non_fraudulent_sample = balanced_data[balanced_data['Is Laundering'] == 0].sample(n=final_size - fraud_count, random_state=42)
-
-balanced_data = pd.concat([fraudulent_sample, non_fraudulent_sample]).sample(frac=1, random_state=42).reset_index(drop=True)
-
-print("Saving data ...")
-# Save the balanced dataset
-balanced_data.to_csv("/var/scratch/hwg580/Balanced_HI-Large_Trans.csv", index=False)
-
-print("Balanced dataset created and saved to 'Balanced_HI-Large_Trans.csv'.")
-
 print("Computing Statistics...")
 # Compute statistics using Pandas operations
 total_transactions = len(data)
