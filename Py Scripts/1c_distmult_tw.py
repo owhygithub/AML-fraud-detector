@@ -57,11 +57,19 @@ train_indices, test_val_indices = train_test_split(indices, test_size=0.4, strat
 val_indices, test_indices = train_test_split(test_val_indices, test_size=0.5, stratify=labels[test_val_indices])
 
 print("Creating mask data...")
-# Create masks
-train_mask = torch.tensor([i in train_indices for i in range(num_edges)], dtype=torch.bool)
-val_mask = torch.tensor([i in val_indices for i in range(num_edges)], dtype=torch.bool)
-test_mask = torch.tensor([i in test_indices for i in range(num_edges)], dtype=torch.bool)
-val_mask
+# Convert indices to a tensor
+indices = torch.arange(num_edges)
+
+# Create masks efficiently using torch.zeros_like and indexing
+train_mask = torch.zeros_like(indices, dtype=torch.bool)
+val_mask = torch.zeros_like(indices, dtype=torch.bool)
+test_mask = torch.zeros_like(indices, dtype=torch.bool)
+
+# Set True at indices present in train_indices, val_indices, test_indices
+train_mask[train_indices] = True
+val_mask[val_indices] = True
+test_mask[test_indices] = True
+print("Mask data created...")
 
 # GRAPH NEURAL NETWORKS
 class GNNLayer(MessagePassing):
