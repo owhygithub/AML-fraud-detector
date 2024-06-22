@@ -430,25 +430,31 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
     print("Lists created...")
 
     for epoch in range(epochs):
-        print(f"\tIn Epoch {epoch}...")
+        print(f"\tIn Epoch {epoch + 1}...")
         # Adjust learning rate based on annealing schedule
         if epoch % annealing_epochs == 0 and epoch != 0:
             new_learning_rate = learning_rate * math.exp(-annealing_rate * epoch)
             for param_group in optimizer.param_groups:
                 param_group['lr'] = new_learning_rate
 
-        print(f"Training model")
+        print(f"Training model...")
         # Training
         model.train()
+        print(f"Applying Zero Grad...")
         optimizer.zero_grad()
+        print(f"Getting scores & embeddings...")
         x_embedding, e_embedding, scores = model(input_data.x, input_data.edge_index[:, train_fold_mask], input_data.edge_attr[train_fold_mask])
+        print(f"Calculating Loss...")
         loss = criterion(scores, labels[train_fold_mask].float())
+        print(f"Backpropagation...")
         loss.backward()
+        print(f"Optimizer...")
         optimizer.step()
 
         print(f"Validation evaluation....")
         # Validation
         model.eval()
+        print(f"Getting validation scores & embeddings....")
         with torch.no_grad():
             val_x_embedding, val_e_embedding, val_scores = model(input_data.x, input_data.edge_index[:, val_fold_mask], input_data.edge_attr[val_fold_mask])
             val_loss = criterion(val_scores, labels[val_fold_mask].float()).item()
