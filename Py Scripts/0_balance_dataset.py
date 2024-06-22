@@ -9,9 +9,9 @@ filename = '/var/scratch/hwg580/HI-Large_Trans.csv'
 data = pd.read_csv(filename, parse_dates=['Timestamp'], infer_datetime_format=True)
 
 print("Computing Statistics...")
-
 # Extract unique accounts from both 'Account' and 'Account.1' columns
-unique_accounts = set(data['Account'].unique()).union(set(data['Account.1'].unique()))
+unique_accounts = pd.concat([data['Account'], data['Account.1']]).unique()
+
 print(f"Number of unique accounts (Account and Account.1 combined): {len(unique_accounts)}")
 
 # Compute statistics using Pandas operations
