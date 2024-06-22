@@ -24,6 +24,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 
 import pickle
 
+print("Started the program...")
 # Specify the file path where the data is saved
 file_path = "/var/scratch/hwg580/graph.pickle"
 
@@ -504,17 +505,12 @@ for metric_name, metric_value in metrics_dict.items():
     else:
         print(f"{metric_name}: {metric_value}")
     print()
-## LOGGING
+
 # Function to log the experiment
 def log_experiment(model_name, learning_rate, out_channels, epoch, weight_decay, dropout, loss, accuracy, precision, recall, f1, mrr):
-    # Create a folder for the experiment if it doesn't exist
-    folder_name = f"Results/{model_name}"
-    if not os.path.exists(folder_name):
-        os.makedirs(folder_name)
-    
     # Save metrics and other information to a file
     timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-    file_name = f"{folder_name}/run_{timestamp}.txt"
+    file_name = f"/var/scratch/hwg580/run_{model_name}_{timestamp}.txt"
     with open(file_name, "w") as f:
         f.write(f"-- HYPERPARAMS:\n")
         f.write(f"TimeStamp: {timestamp}\n")
@@ -533,7 +529,7 @@ def log_experiment(model_name, learning_rate, out_channels, epoch, weight_decay,
         f.write(f"MRR: {mrr}\n")
     
     # Update the general CSV file
-    csv_file = f"Results/general.csv"
+    csv_file = f"/var/scratch/hwg580/general.csv"
     write_header = not os.path.exists(csv_file)
     with open(csv_file, "a") as f:
         writer = csv.writer(f)
