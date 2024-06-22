@@ -7,7 +7,7 @@ from scipy.sparse import coo_matrix, save_npz
 
 print("Import Successful...")
 
-dataset = "HI-Small_Trans"
+dataset = "HI-Small_Trans_balanced"
 filename = f'/var/scratch/hwg580/{dataset}.csv'
 
 # Create an instance of the AMLDataPreprocessing class
@@ -43,7 +43,7 @@ print("Adjacency matrix tensor created...")
 
 print(f"input data: {input_data}")
 
-with open("/var/scratch/hwg580/graph.pickle", "wb") as f:
+with open(f"/var/scratch/hwg580/graph_{dataset}.pickle", "wb") as f:
     pickle.dump({
         'dataset': dataset,
         'visual': visual,
