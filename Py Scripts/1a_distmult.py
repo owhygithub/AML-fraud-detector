@@ -56,12 +56,10 @@ val_indices, test_indices = train_test_split(test_val_indices, test_size=0.5, st
 print("Creating mask data...")
 # Convert indices to a tensor
 indices = torch.arange(num_edges)
-
 # Create masks efficiently using torch.zeros_like and indexing
 train_mask = torch.zeros_like(indices, dtype=torch.bool)
 val_mask = torch.zeros_like(indices, dtype=torch.bool)
 test_mask = torch.zeros_like(indices, dtype=torch.bool)
-
 # Set True at indices present in train_indices, val_indices, test_indices
 train_mask[train_indices] = True
 val_mask[val_indices] = True
@@ -299,10 +297,9 @@ dropout = best_dropout # dropout probability
 annealing_rate = best_annealing_rate  # Rate at which to decrease the learning rate
 annealing_epochs = best_annealing_epochs # Number of epochs before decreasing learning rate
 
-print("Loading Model...")
-model = GNNModel(node_features=input_data.x.size(1), edge_features=input_data.edge_attr.size(1), out_channels=out_channels, dropout=dropout)
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
-criterion = nn.BCEWithLogitsLoss()  # Binary classification loss
+# model = GNNModel(node_features=input_data.x.size(1), edge_features=input_data.edge_attr.size(1), out_channels=out_channels, dropout=dropout)
+# optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+# criterion = nn.BCEWithLogitsLoss()  # Binary classification loss
 
 def train(data):
     model.train()
@@ -398,13 +395,20 @@ best_epoch_metrics = {
 for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(input_data.edge_attr.shape[0]))):
     print(f"\nFold {fold + 1}/{k}")
 
-    train_fold_mask = torch.tensor([i in train_fold_indices for i in range(input_data.edge_attr.shape[0])], dtype=torch.bool)
-    val_fold_mask = torch.tensor([i in val_fold_indices for i in range(input_data.edge_attr.shape[0])], dtype=torch.bool)
+    print("Creating mask data...")
+    train_fold_mask = torch.zeros(input_data.edge_attr.shape[0], dtype=torch.bool)
+    val_fold_mask = torch.zeros(input_data.edge_attr.shape[0], dtype=torch.bool)
+
+    train_fold_mask[train_fold_indices] = True
+    val_fold_mask[val_fold_indices] = True
+    print("Mask data created...")
 
     # Initialize model, optimizer, and loss function for each fold
+    print("Loading Model...")
     model = GNNModel(node_features=input_data.x.size(1), edge_features=input_data.edge_attr.size(1), out_channels=out_channels, dropout=dropout)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     criterion = nn.BCEWithLogitsLoss()
+    print("Model. optimizer, criterion Loaded...")
 
     train_losses = []
     val_losses = []
@@ -423,14 +427,17 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
         'sorted_indices': []
     }
     patience_counter = 0
+    print("Lists created...")
 
     for epoch in range(epochs):
+        print(f"\tIn Epoch {epoch}...")
         # Adjust learning rate based on annealing schedule
         if epoch % annealing_epochs == 0 and epoch != 0:
             new_learning_rate = learning_rate * math.exp(-annealing_rate * epoch)
             for param_group in optimizer.param_groups:
                 param_group['lr'] = new_learning_rate
 
+        print(f"Training model")
         # Training
         model.train()
         optimizer.zero_grad()
@@ -439,18 +446,22 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
         loss.backward()
         optimizer.step()
 
+        print(f"Validation evaluation....")
         # Validation
         model.eval()
         with torch.no_grad():
             val_x_embedding, val_e_embedding, val_scores = model(input_data.x, input_data.edge_index[:, val_fold_mask], input_data.edge_attr[val_fold_mask])
             val_loss = criterion(val_scores, labels[val_fold_mask].float()).item()
 
+        print(f"Losses....")
         train_losses.append(loss.item())
         val_losses.append(val_loss)
 
+        print(f"Labels....")
         train_labels = labels[train_fold_mask]
         val_labels = labels[val_fold_mask]
 
+        print(f"Calculating Metrics....")
         # Calculate metrics
         train_predictions = assign_predictions(scores)
         val_predictions = assign_predictions(val_scores)
@@ -466,6 +477,7 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
         print(f"\nEpoch {epoch}, Training Loss: {loss:.4f}, Validation Loss: {val_loss:.4f}")
         print(f"Accuracy: {val_accuracy:.4f}, Precision: {val_precision:.4f}, Recall: {val_recall:.4f}, F1 Score: {val_f1:.4f}, MRR: {val_mrr:.4f}")
 
+        print(f"Storing Metrics....")
         # Store metrics for the current epoch
         best_fold_epoch_metrics['accuracy'].append(val_accuracy)
         best_fold_epoch_metrics['precision'].append(val_precision)
@@ -501,6 +513,7 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
                 print(f"Validation loss hasn't improved for {patience} epochs. Early stopping...")
                 break
 
+    print(f"Storing Metrics for fold....")
     # Store metrics for the fold
     fold_accuracy_list.append(best_fold_epoch_metrics['best_accuracy'])
     fold_precision_list.append(best_fold_epoch_metrics['best_precision'])
@@ -508,6 +521,7 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
     fold_f1_list.append(best_fold_epoch_metrics['best_f1'])
     fold_mrr_list.append(best_fold_epoch_metrics['best_mrr'])
 
+    print(f"Storing Metrics for best model in fold....")
     # Store losses for the best model of the fold
     best_epoch_metrics['accuracy'].append(best_fold_epoch_metrics['accuracy'])
     best_epoch_metrics['precision'].append(best_fold_epoch_metrics['precision'])
