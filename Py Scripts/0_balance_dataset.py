@@ -8,24 +8,6 @@ print("Loading...")
 filename = '/var/scratch/hwg580/HI-Large_Trans.csv'
 data = dd.read_csv(filename, parse_dates=['Timestamp'], infer_datetime_format=True)
 
-print("Computing Statistics...")
-# Compute statistics (use `.compute()` to trigger computation in Dask)
-total_transactions = len(data)
-fraudulent_transactions = data['Is Laundering'].sum().compute()
-fraud_percentage = (fraudulent_transactions / total_transactions) * 100
-
-currency_counts = data['Receiving Currency'].value_counts(normalize=True) * 100
-payment_format_counts = data['Payment Format'].value_counts(normalize=True) * 100
-
-# Print statistics
-print(f"Total transactions: {total_transactions}")
-print(f"Fraudulent transactions: {fraudulent_transactions}")
-print(f"Percentage of fraudulent transactions: {fraud_percentage:.2f}%")
-print("\nPercentage of different currencies:")
-print(currency_counts.compute())  # Use `.compute()` to get Dask series as pandas series
-print("\nPercentage of different payment formats:")
-print(payment_format_counts.compute())  # Use `.compute()` to get Dask series as pandas series
-
 # Identify fraudulent transactions and connected non-fraudulent transactions efficiently
 print("Creating balanced dataset...")
 
@@ -66,3 +48,26 @@ print("Saving data ...")
 balanced_data.to_csv("/var/scratch/hwg580/Balanced_HI-Large_Trans.csv", index=False, single_file=True)
 
 print("Balanced dataset created and saved to 'Balanced_HI-Large_Trans.csv'.")
+
+print("Computing Statistics...")
+# Compute statistics using Dask dataframe operations
+total_transactions = data.index.size.compute()
+fraudulent_transactions = data['Is Laundering'].sum().compute()
+fraud_percentage = (fraudulent_transactions / total_transactions) * 100
+
+# Compute percentages of different currencies
+currency_counts = data['Receiving Currency'].value_counts().compute()
+currency_percentage = (currency_counts / currency_counts.sum()) * 100
+
+# Compute percentages of different payment formats
+payment_format_counts = data['Payment Format'].value_counts().compute()
+payment_format_percentage = (payment_format_counts / payment_format_counts.sum()) * 100
+
+# Print statistics
+print(f"Total transactions: {total_transactions}")
+print(f"Fraudulent transactions: {fraudulent_transactions}")
+print(f"Percentage of fraudulent transactions: {fraud_percentage:.2f}%")
+print("\nPercentage of different currencies:")
+print(currency_percentage)
+print("\nPercentage of different payment formats:")
+print(payment_format_percentage)
