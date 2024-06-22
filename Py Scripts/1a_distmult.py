@@ -45,8 +45,6 @@ y = saved_data['y']
 input_data = saved_data['input_data']
 adjacency_tensor = saved_data['adjacency_tensor']
 
-train_loader = DataLoader([input_data], batch_size=32, shuffle=True)
-
 print("Splitting data...")
 # Split the nodes into training, validation, and test sets
 num_edges = edges_features.shape[0]
@@ -253,27 +251,27 @@ def objective(trial):
     return recall
 
 # Run Optuna optimization
-study = optuna.create_study(direction='maximize')
-study.optimize(objective, n_trials=32)  # Number of trials can be adjusted
+# study = optuna.create_study(direction='maximize')
+# study.optimize(objective, n_trials=32)  # Number of trials can be adjusted
 
-# Print best trial
-print("Best trial:")
-trial = study.best_trial
+# # Print best trial
+# print("Best trial:")
+# trial = study.best_trial
 
-print("  Recall: {}".format(trial.value))
-print("  Best hyperparameters: {}".format(trial.params))
+# print("  Recall: {}".format(trial.value))
+# print("  Best hyperparameters: {}".format(trial.params))
 
-# Best hyperparameters
-best_params = trial.params
+# # Best hyperparameters
+# best_params = trial.params
 
 # Now, you can use the best hyperparameters to train your final model
-best_epochs = best_params['epochs']
-best_lr = best_params['lr']
-best_out_channels = best_params['out_channels']
-best_weight_decay = best_params['weight_decay']
-best_dropout = best_params['dropout']
-best_annealing_rate = best_params['annealing_rate']
-best_annealing_epochs = best_params['annealing_epochs']
+best_epochs = 100
+best_lr = 0.001
+best_out_channels = 10
+best_weight_decay = 0.00005
+best_dropout = 0.5
+best_annealing_rate = 0.0001
+best_annealing_epochs = 10
 
 # SAVE hyperparams for DistMult
 print("Saving Hyperparameters...")
