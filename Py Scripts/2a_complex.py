@@ -144,13 +144,12 @@ class GNNModel(nn.Module):
         complex_product = heads * expanded_ew * torch.conj(tails)
 
         # Sum along the appropriate dimension (dim=0 or dim=-1 based on your requirement)
-        raw_scores = torch.sum(complex_product, dim=0)
+        raw_scores = torch.sum(complex_product, dim=-1)  # Sum along the last dimension
 
         # Optionally apply sigmoid activation (if raw_scores are logits)
         normalized_scores = torch.sigmoid(raw_scores)
 
         return normalized_scores
-
 
     def mapping(self, ew, edge_index):
         return edge_index[0], edge_index[1]
