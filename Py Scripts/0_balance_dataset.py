@@ -10,11 +10,9 @@ data = pd.read_csv(filename, parse_dates=['Timestamp'], infer_datetime_format=Tr
 
 print("Computing Statistics...")
 
-# Calculate the number of unique bank accounts
-unique_accounts = data['Bank Account'].nunique()
-
-print(f"Number of unique bank accounts: {unique_accounts}")
-
+# Extract unique accounts from both 'Account' and 'Account.1' columns
+unique_accounts = set(data['Account'].unique()).union(set(data['Account.1'].unique()))
+print(f"Number of unique accounts (Account and Account.1 combined): {len(unique_accounts)}")
 
 # Compute statistics using Pandas operations
 total_transactions = len(data)
