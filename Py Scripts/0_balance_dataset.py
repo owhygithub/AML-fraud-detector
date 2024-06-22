@@ -12,7 +12,8 @@ data = dd.read_csv(filename, parse_dates=['Timestamp'], infer_datetime_format=Tr
 print("Creating balanced dataset...")
 
 # Find fraudulent transactions indices
-fraud_indices = data[data['Is Laundering'] == 1].index
+print("Find fraudulent transactions indices ...")
+fraud_indices = data[data['Is Laundering'] == 1].index.compute()
 
 # Find connected non-fraudulent transactions using a set for faster lookup
 print("Identify non-fraudulent transactions connected to fraudulent ones ...")
