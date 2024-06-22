@@ -297,27 +297,44 @@ def assign_top_n_predictions(val_scores, val_labels):
 
     return predicted_labels, sorted_indices
 
+# def calculate_mrr(sorted_indices, true_values):
+#     # print("Calculating MRR...")
+#     rank = 0
+#     count = 0
+#     for i in range( len(true_values) ):
+#         if true_values[i] == 1: # should only be the positive ones --> 600
+#             count += 1
+#             for j in range( len(sorted_indices) ):
+#                 if sorted_indices[j] == i:
+#                     # print(f"sorted indices: {sorted_indices[j]}")
+#                     # print(f"i: {i}")
+#                     position = j+1
+#                     # print(f"position: {position}")
+#                     break
+#             rank += 1/position
+#             # print(f"rank - individual: {rank}")
+#     # print(f"rank: {rank}")
+#     # print(f"n of true values: {count}")
+#     mrr = rank / count
+#     # print("MRR Calculated...")
+#     return mrr
+
+
 def calculate_mrr(sorted_indices, true_values):
-    # print("Calculating MRR...")
-    rank = 0
-    count = 0
-    for i in range( len(true_values) ):
-        if true_values[i] == 1: # should only be the positive ones --> 600
-            count += 1
-            for j in range( len(sorted_indices) ):
-                if sorted_indices[j] == i:
-                    # print(f"sorted indices: {sorted_indices[j]}")
-                    # print(f"i: {i}")
-                    position = j+1
-                    # print(f"position: {position}")
-                    break
-            rank += 1/position
-            # print(f"rank - individual: {rank}")
-    # print(f"rank: {rank}")
-    # print(f"n of true values: {count}")
-    mrr = rank / count
-    # print("MRR Calculated...")
+    # Get the positions of the true values in the sorted indices
+    positive_indices = torch.nonzero(true_values).squeeze()
+    
+    if positive_indices.numel() == 0:  # Check if there are no positive true values
+        return 0.0
+
+    # Find the ranks of these positive indices in the sorted list
+    ranks = (sorted_indices.unsqueeze(1) == positive_indices).nonzero(as_tuple=True)[0] + 1
+    
+    # Calculate the MRR
+    mrr = (1.0 / ranks.float()).mean().item()
+    
     return mrr
+
 
 print("Training Loop...")
 # K-fold Cross-Validation
