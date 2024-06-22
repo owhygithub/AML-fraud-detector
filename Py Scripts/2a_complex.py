@@ -144,7 +144,7 @@ class GNNModel(nn.Module):
         complex_product = heads * expanded_ew * torch.conj(tails)
 
         # Sum along the appropriate dimension (dim=0 or dim=-1 based on your requirement)
-        raw_scores = torch.sum(complex_product, dim=-1)  # Sum along the last dimension
+        raw_scores = torch.real(complex_product)  # Sum along the last dimension
 
         # Optionally apply sigmoid activation (if raw_scores are logits)
         normalized_scores = torch.sigmoid(raw_scores)
@@ -174,17 +174,22 @@ def objective(trial):
     model = GNNModel(node_features=input_data.x.size(1), edge_features=input_data.edge_attr.size(1), out_channels=out_channels, dropout=dropout)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     criterion = nn.BCEWithLogitsLoss()
-
-    # Training function
+    
     def train(data):
         model.train()
         optimizer.zero_grad()
         x_embedding, e_embedding, scores = model(data.x, data.edge_index[:, train_mask], data.edge_attr[train_mask])
-        print(scores.size())
-        print(labels[train_mask].size)
-        loss = criterion(scores, labels[train_mask].float())
+        
+        # Extract target labels corresponding to the train_mask
+        targets = labels[train_mask].float()
+
+        # Calculate binary cross-entropy loss
+        loss = criterion(scores, targets)
+        
+        # Backward pass and optimization step
         loss.backward()
         optimizer.step()
+    
         return loss.item()
 
     # Validation function
