@@ -174,6 +174,8 @@ def objective(trial):
         model.train()
         optimizer.zero_grad()
         x_embedding, e_embedding, scores = model(data.x, data.edge_index[:, train_mask], data.edge_attr[train_mask])
+        print(scores.size())
+        print(labels[train_mask].size)
         loss = criterion(scores, labels[train_mask].float())
         loss.backward()
         optimizer.step()
