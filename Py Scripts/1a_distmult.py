@@ -30,6 +30,7 @@ file_path = "/var/scratch/hwg580/graph.pickle"
 with open(file_path, "rb") as f:
     saved_data = pickle.load(f)
 
+print("Loading data from Data Pickle...")
 # Now, you can access the saved data using the keys used during saving
 dataset = saved_data['dataset']
 edges_features = saved_data['edges_features']
@@ -46,6 +47,7 @@ adjacency_tensor = saved_data['adjacency_tensor']
 
 train_loader = DataLoader([input_data], batch_size=32, shuffle=True)
 
+print("Splitting data...")
 # Split the nodes into training, validation, and test sets
 num_edges = edges_features.shape[0]
 indices = list(range(num_edges))
@@ -53,6 +55,7 @@ indices = list(range(num_edges))
 train_indices, test_val_indices = train_test_split(indices, test_size=0.4, stratify=labels)
 val_indices, test_indices = train_test_split(test_val_indices, test_size=0.5, stratify=labels[test_val_indices])
 
+print("Creating mask data...")
 # Create masks
 train_mask = torch.tensor([i in train_indices for i in range(num_edges)], dtype=torch.bool)
 val_mask = torch.tensor([i in val_indices for i in range(num_edges)], dtype=torch.bool)
@@ -165,13 +168,13 @@ class GNNModel(nn.Module):
         
         return head_indices, tail_indices
 
+print("Hyperparameter Tuning in Progress...")
 # HYPERPARAMS
 def assign_predictions(val_scores, threshold=0.5):
     # Assign labels based on a threshold
     predicted_labels = (val_scores >= threshold).float()
     return predicted_labels
 
-# Define the objective function for Optuna
 # Define the objective function for Optuna
 def objective(trial):
     # Suggest hyperparameters
@@ -183,87 +186,78 @@ def objective(trial):
     annealing_rate = trial.suggest_categorical('annealing_rate', [0.01, 0.001])
     annealing_epochs = trial.suggest_categorical('annealing_epochs', [10, 20])
 
-    # Initialize model, optimizer, and loss function for each fold
     model = GNNModel(node_features=input_data.x.size(1), edge_features=input_data.edge_attr.size(1), out_channels=out_channels, dropout=dropout)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     criterion = nn.BCEWithLogitsLoss()
 
-    k = 5
-    kf = KFold(n_splits=k, shuffle=True, random_state=42)
+    # Training function
+    def train(data):
+        model.train()
+        optimizer.zero_grad()
+        x_embedding, e_embedding, scores = model(data.x, data.edge_index[:, train_mask], data.edge_attr[train_mask])
+        loss = criterion(scores, labels[train_mask].float())
+        loss.backward()
+        optimizer.step()
+        return loss.item()
 
-    all_val_losses = []
-    all_accuracies = []
-    all_precisions = []
-    all_recalls = []
-    all_f1s = []
+    # Validation function
+    def validate(data):
+        model.eval()
+        with torch.no_grad():
+            _, _, scores = model(data.x, data.edge_index[:, val_mask], data.edge_attr[val_mask])
+            val_loss = criterion(scores, labels[val_mask].float()).item()
+        return val_loss
 
-    for fold, (train_indices, val_indices) in enumerate(kf.split(range(input_data.edge_attr.shape[0]))):
-        print(f"Fold {fold + 1}/{k}")
+    # Training loop
+    best_val_loss = float('inf')
+    patience_counter = 0
+    patience = 2  # Stricter patience
 
-        train_mask = torch.tensor([i in train_indices for i in range(input_data.edge_attr.shape[0])], dtype=torch.bool)
-        val_mask = torch.tensor([i in val_indices for i in range(input_data.edge_attr.shape[0])], dtype=torch.bool)
+    for epoch in range(epochs):
+        # Adjust learning rate based on annealing schedule
+        if epoch % annealing_epochs == 0 and epoch != 0:
+            new_learning_rate = lr * math.exp(-annealing_rate * epoch)
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = new_learning_rate
+                
+        # Training
+        train(input_data)
+        # Validation
+        val_loss = validate(input_data)
 
-        patience_counter = 0
-        best_val_loss = float('inf')
-        patience = 2
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            patience_counter = 0
+        else:
+            patience_counter += 1
+            if patience_counter > patience:
+                break
 
-        for epoch in range(epochs):
-            if epoch % annealing_epochs == 0 and epoch != 0:
-                new_learning_rate = lr * math.exp(-annealing_rate * epoch)
-                for param_group in optimizer.param_groups:
-                    param_group['lr'] = new_learning_rate
+    # Evaluate on validation set
+    model.eval()
+    with torch.no_grad():
+        _, _, val_scores = model(input_data.x, input_data.edge_index[:, val_mask], input_data.edge_attr[val_mask])
+    val_labels = labels[val_mask]
+    predictions = (val_scores >= 0.5).float()
 
-            model.train()
-            optimizer.zero_grad()
-            x_embedding, e_embedding, scores = model(input_data.x, input_data.edge_index[:, train_mask], input_data.edge_attr[train_mask])
-            loss = criterion(scores, labels[train_mask].float())
-            loss.backward()
-            optimizer.step()
-
-            model.eval()
-            with torch.no_grad():
-                _, _, val_scores = model(input_data.x, input_data.edge_index[:, val_mask], input_data.edge_attr[val_mask])
-                val_loss = criterion(val_scores, labels[val_mask].float()).item()
-
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
-                patience_counter = 0
-            else:
-                patience_counter += 1
-                if patience_counter > patience:
-                    break
-
-            val_labels = labels[val_mask]
-            val_predictions = assign_predictions(val_scores)
-
-            val_accuracy = accuracy_score(val_labels.cpu(), val_predictions.cpu())
-            val_precision = precision_score(val_labels.cpu(), val_predictions.cpu())
-            val_recall = recall_score(val_labels.cpu(), val_predictions.cpu())
-            val_f1 = f1_score(val_labels.cpu(), val_predictions.cpu())
-
-            all_val_losses.append(val_loss)
-            all_accuracies.append(val_accuracy)
-            all_precisions.append(val_precision)
-            all_recalls.append(val_recall)
-            all_f1s.append(val_f1)
-
-    mean_val_loss = sum(all_val_losses) / len(all_val_losses)
-    mean_accuracy = sum(all_accuracies) / len(all_accuracies)
-    mean_precision = sum(all_precisions) / len(all_precisions)
-    mean_recall = sum(all_recalls) / len(all_recalls)
-    mean_f1 = sum(all_f1s) / len(all_f1s)
-
-    return mean_recall
+    recall = recall_score(val_labels.cpu(), predictions.cpu())
+    return recall
 
 # Run Optuna optimization
 study = optuna.create_study(direction='maximize')
 study.optimize(objective, n_trials=32)  # Number of trials can be adjusted
 
-# Print the best hyperparameters
-best_params = study.best_params
-print("Best hyperparameters found: ", best_params)
+# Print best trial
+print("Best trial:")
+trial = study.best_trial
 
-# Train and evaluate with the best hyperparameters using k-fold cross-validation
+print("  Recall: {}".format(trial.value))
+print("  Best hyperparameters: {}".format(trial.params))
+
+# Best hyperparameters
+best_params = trial.params
+
+# Now, you can use the best hyperparameters to train your final model
 best_epochs = best_params['epochs']
 best_lr = best_params['lr']
 best_out_channels = best_params['out_channels']
@@ -273,7 +267,7 @@ best_annealing_rate = best_params['annealing_rate']
 best_annealing_epochs = best_params['annealing_epochs']
 
 # SAVE hyperparams for DistMult
-
+print("Saving Hyperparameters...")
 with open("/var/scratch/hwg580/distmult_hyperparams.pickle", "wb") as f:
     pickle.dump({
         'best_epochs': best_epochs,
@@ -298,6 +292,7 @@ dropout = best_dropout # dropout probability
 annealing_rate = best_annealing_rate  # Rate at which to decrease the learning rate
 annealing_epochs = best_annealing_epochs # Number of epochs before decreasing learning rate
 
+print("Loading Model...")
 model = GNNModel(node_features=input_data.x.size(1), edge_features=input_data.edge_attr.size(1), out_channels=out_channels, dropout=dropout)
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 criterion = nn.BCEWithLogitsLoss()  # Binary classification loss
@@ -366,6 +361,7 @@ def calculate_mrr(sorted_indices, true_values):
     # print("MRR Calculated...")
     return mrr
 
+print("Training Loop...")
 # K-fold Cross-Validation
 k = 5
 kf = KFold(n_splits=k, shuffle=True, random_state=42)
@@ -459,6 +455,9 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
         val_recall = recall_score(val_labels, val_predictions)
         val_f1 = f1_score(val_labels, val_predictions)
         val_mrr = calculate_mrr(torch.argsort(val_scores, descending=True), val_labels)
+
+        print(f"\nEpoch {epoch}, Training Loss: {loss:.4f}, Validation Loss: {val_loss:.4f}")
+        print(f"Accuracy: {val_accuracy:.4f}, Precision: {val_precision:.4f}, Recall: {val_recall:.4f}, F1 Score: {val_f1:.4f}, MRR: {val_mrr:.4f}")
 
         # Store metrics for the current epoch
         best_fold_epoch_metrics['accuracy'].append(val_accuracy)

@@ -32,6 +32,13 @@ file_path = "/var/scratch/hwg580/graph.pickle"
 with open(file_path, "rb") as f:
     saved_data = pickle.load(f)
 
+print("Loading data...")
+print("Splitting data...")
+print("Creating mask data...")
+print("Hyperparameter Tuning in Progress...")
+print("Saving Hyperparameters...")
+print("Loading Model...")
+print("Training Loop...")
 # Now, you can access the saved data using the keys used during saving
 dataset = saved_data['dataset']
 edges_features = saved_data['edges_features']

@@ -32,6 +32,7 @@ file_path = "/var/scratch/hwg580/graph.pickle"
 with open(file_path, "rb") as f:
     saved_data = pickle.load(f)
 
+print("Loading data...")
 # Now, you can access the saved data using the keys used during saving
 dataset = saved_data['dataset']
 edges_features = saved_data['edges_features']
@@ -47,12 +48,15 @@ input_data = saved_data['input_data']
 time_closeness = saved_data['time_closeness']
 adjacency_tensor = saved_data['adjacency_tensor']
 
+print("Splitting data...")
 # Split the nodes into training, validation, and test sets
 num_edges = edges_features.shape[0]
 indices = list(range(num_edges))
 print(indices)
 train_indices, test_val_indices = train_test_split(indices, test_size=0.4, stratify=labels)
 val_indices, test_indices = train_test_split(test_val_indices, test_size=0.5, stratify=labels[test_val_indices])
+
+print("Creating mask data...")
 # Create masks
 train_mask = torch.tensor([i in train_indices for i in range(num_edges)], dtype=torch.bool)
 val_mask = torch.tensor([i in val_indices for i in range(num_edges)], dtype=torch.bool)
@@ -186,6 +190,7 @@ file_path = "/var/scratch/hwg580/distmult_hyperparams.pickle"
 with open(file_path, "rb") as f:
     saved_data = pickle.load(f)
 
+print("Hyperparameter Loading...")
 # Now, you can access the saved data using the keys used during saving
 best_epochs = saved_data['best_epochs']
 best_lr = saved_data['best_lr']
@@ -206,6 +211,7 @@ dropout = best_dropout # dropout probability
 annealing_rate = best_annealing_rate  # Rate at which to decrease the learning rate
 annealing_epochs = annealing_epochs  # Number of epochs before decreasing learning rate
 
+print("Loading Model...")
 model = GNNModel(node_features=input_data.x.size(1), edge_features=input_data.edge_attr.size(1), out_channels=out_channels, dropout=dropout)
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 criterion = nn.BCEWithLogitsLoss()  # Binary classification loss
@@ -289,6 +295,7 @@ precision_list = []
 recall_list = []
 f1_list = []
 
+print("Training Loop...")
 for epoch in range(epochs):
     # Adjust learning rate based on annealing schedule
     if epoch % annealing_epochs == 0 and epoch != 0:
@@ -465,6 +472,8 @@ for metric_name, metric_value in metrics_dict.items():
     else:
         print(f"{metric_name}: {metric_value}")
     print()
+
+print("Testing...")
 # TEST DATA
 test_x_embedding, test_e_embedding, test_scores, test_loss = test(input_data)
 print(f"Test Loss: {test_loss:.4f}")

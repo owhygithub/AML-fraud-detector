@@ -26,6 +26,7 @@ print("Started the program...")
 # Specify the file path where the data is saved
 file_path = "/var/scratch/hwg580/graph.pickle"
 
+print("Loading data from Data Pickle...")
 # Load the data from the file
 with open(file_path, "rb") as f:
     saved_data = pickle.load(f)
@@ -46,6 +47,7 @@ adjacency_tensor = saved_data['adjacency_tensor']
 
 train_loader = DataLoader([input_data], batch_size=32, shuffle=True)
 
+print("Splitting data...")
 # Split the nodes into training, validation, and test sets
 num_edges = edges_features.shape[0]
 indices = list(range(num_edges))
@@ -53,10 +55,16 @@ indices = list(range(num_edges))
 train_indices, test_val_indices = train_test_split(indices, test_size=0.4, stratify=labels)
 val_indices, test_indices = train_test_split(test_val_indices, test_size=0.5, stratify=labels[test_val_indices])
 
+print("Creating mask data...")
 # Create masks
 train_mask = torch.tensor([i in train_indices for i in range(num_edges)], dtype=torch.bool)
 val_mask = torch.tensor([i in val_indices for i in range(num_edges)], dtype=torch.bool)
 test_mask = torch.tensor([i in test_indices for i in range(num_edges)], dtype=torch.bool)
+
+def assign_predictions(val_scores, threshold=0.5):
+    # Assign labels based on a threshold
+    predicted_labels = (val_scores >= threshold).float()
+    return predicted_labels
 
 # GNN
 class GNNLayer(MessagePassing):
@@ -172,6 +180,7 @@ file_path = "/var/scratch/hwg580/distmult_hyperparams.pickle"
 with open(file_path, "rb") as f:
     saved_data = pickle.load(f)
 
+print("Hyperparameter Loading...")
 # Now, you can access the saved data using the keys used during saving
 best_epochs = saved_data['best_epochs']
 best_lr = saved_data['best_lr']
@@ -192,6 +201,7 @@ dropout = best_dropout # dropout probability
 annealing_rate = best_annealing_rate  # Rate at which to decrease the learning rate
 annealing_epochs = annealing_epochs  # Number of epochs before decreasing learning rate
 
+print("Loading Model...")
 model = GNNModel(node_features=input_data.x.size(1), edge_features=input_data.edge_attr.size(1), out_channels=out_channels, dropout=dropout)
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 criterion = nn.BCEWithLogitsLoss()  # Binary classification loss
@@ -275,6 +285,7 @@ precision_list = []
 recall_list = []
 f1_list = []
 
+print("Training Loop...")
 for epoch in range(epochs):
     # Adjust learning rate based on annealing schedule
     if epoch % annealing_epochs == 0 and epoch != 0:
