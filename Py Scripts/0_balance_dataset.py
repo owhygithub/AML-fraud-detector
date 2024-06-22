@@ -8,6 +8,10 @@ print("Loading...")
 filename = '/var/scratch/hwg580/HI-Large_Trans.csv'
 data = pd.read_csv(filename, parse_dates=['Timestamp'], infer_datetime_format=True)
 
+# Reduce the dataset size by removing 66% of the data
+print("Reducing dataset size...")
+data = data.sample(frac=0.33, random_state=42).reset_index(drop=True)
+
 # Identify fraudulent transactions and connected non-fraudulent transactions efficiently
 print("Creating balanced dataset...")
 
@@ -17,7 +21,7 @@ fraud_indices = data[data['Is Laundering'] == 1].index
 
 # Find connected non-fraudulent transactions using a set for faster lookup
 print("Identify non-fraudulent transactions connected to fraudulent ones ...")
-connected_accounts = set(data.loc[fraud_indices, 'Account'].unique()).union(set(data.loc[fraud_indices, 'To Bank'].unique()))
+connected_accounts = set(data.loc[fraud_indices, 'Account']).union(set(data.loc[fraud_indices, 'To Bank']))
 
 # Filter non-fraudulent transactions that are connected to fraudulent ones
 print("Filter non-fraudulent transactions that are connected to fraudulent ones ...")
@@ -25,7 +29,7 @@ connected_non_fraud_indices = data[(data['Is Laundering'] == 0) & (data['Account
 
 # Combine indices of fraudulent and connected non-fraudulent transactions
 print("Combine fraudulent and connected non-fraudulent transactions ...")
-combined_indices = fraud_indices.union(connected_non_fraud_indices)
+combined_indices = pd.Index(np.concatenate([fraud_indices, connected_non_fraud_indices]))
 
 # Sample from combined indices to create a balanced dataset
 print("Ensure the final dataset size is between 3 to 5 million transactions ...")
@@ -51,7 +55,7 @@ balanced_data.to_csv("/var/scratch/hwg580/Balanced_HI-Large_Trans.csv", index=Fa
 print("Balanced dataset created and saved to 'Balanced_HI-Large_Trans.csv'.")
 
 print("Computing Statistics...")
-# Compute statistics using Pandas dataframe operations
+# Compute statistics using Pandas operations
 total_transactions = len(data)
 fraudulent_transactions = data['Is Laundering'].sum()
 fraud_percentage = (fraudulent_transactions / total_transactions) * 100
