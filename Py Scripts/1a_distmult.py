@@ -24,7 +24,7 @@ import pickle
 
 print("Started the program...")
 # Specify the file path where the data is saved
-file_path = "/var/scratch/hwg580/graph.pickle"
+file_path = "/var/scratch/hwg580/graph_HI-Small_Trans_half.pickle"
 
 # Load the data from the file
 with open(file_path, "rb") as f:
