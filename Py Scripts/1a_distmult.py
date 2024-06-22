@@ -321,19 +321,16 @@ def assign_top_n_predictions(val_scores, val_labels):
 
 
 def calculate_mrr(sorted_indices, true_values):
-    # Get the positions of the true values in the sorted indices
     positive_indices = torch.nonzero(true_values).squeeze()
-    
-    if positive_indices.numel() == 0:  # Check if there are no positive true values
+    if positive_indices.numel() == 0:
         return 0.0
 
-    # Find the ranks of these positive indices in the sorted list
-    ranks = (sorted_indices.unsqueeze(1) == positive_indices).nonzero(as_tuple=True)[0] + 1
-    
-    # Calculate the MRR
-    mrr = (1.0 / ranks.float()).mean().item()
-    
+    # Map positive indices to their ranks in the sorted list
+    ranks = torch.nonzero(sorted_indices.unsqueeze(1) == positive_indices.unsqueeze(0)).float()[:, 0] + 1
+
+    mrr = (1.0 / ranks).mean().item()
     return mrr
+
 
 
 print("Training Loop...")
@@ -450,6 +447,7 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
         val_precision = precision_score(val_labels, val_predictions)
         val_recall = recall_score(val_labels, val_predictions)
         val_f1 = f1_score(val_labels, val_predictions)
+
         print(f"Calculating MRR...")
         val_mrr = calculate_mrr(torch.argsort(val_scores, descending=True), val_labels)
 
