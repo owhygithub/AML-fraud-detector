@@ -185,9 +185,14 @@ def objective(trial):
     def validate(data):
         model.eval()
         with torch.no_grad():
-            _, _, scores = model(data.x, data.edge_index[:, val_mask], data.edge_attr[val_mask])
+            x_embedding, e_embedding, scores = model(data.x, data.edge_index[:, val_mask], data.edge_attr[val_mask])
             val_loss = criterion(scores, labels[val_mask].float()).item()
-        return val_loss
+
+            # Print shapes for debugging
+            print(f"Validation shapes - scores: {scores.shape}, labels: {labels[val_mask].shape}")
+
+        return x_embedding, e_embedding, scores, val_loss
+
 
     # Training loop
     best_val_loss = float('inf')
