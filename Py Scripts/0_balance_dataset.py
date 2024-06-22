@@ -4,9 +4,9 @@ import numpy as np
 print("Import Successful...")
 
 print("Loading...")
-# Load the data
-filename = f'/var/scratch/hwg580/HI-Large_Trans.csv'
-data = pd.read_csv(filename)
+# Load the data with memory-efficient settings
+filename = '/var/scratch/hwg580/HI-Large_Trans.csv'
+data = pd.read_csv(filename, parse_dates=['Timestamp'], infer_datetime_format=True)
 
 print("Computing Statistics...")
 # Compute statistics
@@ -26,46 +26,41 @@ print(currency_counts)
 print("\nPercentage of different payment formats:")
 print(payment_format_counts)
 
-# Create a balanced dataset
+# Identify fraudulent transactions and connected non-fraudulent transactions efficiently
 print("Creating balanced dataset...")
-# Step 1: Identify all fraudulent transactions
-fraud_data = data[data['Is Laundering'] == 1]
+fraud_indices = data.index[data['Is Laundering'] == 1]
 
-# Step 2: Identify non-fraudulent transactions connected to fraudulent ones
-# Create sets to hold the connected accounts
+# Find connected non-fraudulent transactions using a set for faster lookup
 print("Identify non-fraudulent transactions connected to fraudulent ones ...")
-connected_accounts = set(fraud_data['Account'].unique()).union(set(fraud_data['To Bank'].unique()))
+connected_accounts = set(data.loc[fraud_indices, 'Account'].unique()).union(set(data.loc[fraud_indices, 'To Bank'].unique()))
 
 # Filter non-fraudulent transactions that are connected to fraudulent ones
 print("Filter non-fraudulent transactions that are connected to fraudulent ones ...")
-connected_non_fraud_data = data[(data['Is Laundering'] == 0) & (data['Account'].isin(connected_accounts) | data['To Bank'].isin(connected_accounts))]
+connected_non_fraud_indices = data.index[(data['Is Laundering'] == 0) & (data['Account'].isin(connected_accounts) | data['To Bank'].isin(connected_accounts))]
 
-# Combine fraudulent and connected non-fraudulent transactions
+# Combine indices of fraudulent and connected non-fraudulent transactions
 print("Combine fraudulent and connected non-fraudulent transactions ...")
-combined_data = pd.concat([fraud_data, connected_non_fraud_data])
+combined_indices = np.concatenate((fraud_indices, connected_non_fraud_indices))
 
-# Ensure the final dataset size is between 3 to 5 million transactions
+# Sample from combined indices to create a balanced dataset
 print("Ensure the final dataset size is between 3 to 5 million transactions ...")
-final_size = min(max(len(combined_data), 3000000), 5000000)
-sampled_data = combined_data.sample(n=final_size, random_state=42)
+np.random.seed(42)  # Set random seed for reproducibility
+final_size = min(max(len(combined_indices), 3000000), 5000000)
+sampled_indices = np.random.choice(combined_indices, size=final_size, replace=False)
+
+# Create balanced dataset
+balanced_data = data.loc[sampled_indices].reset_index(drop=True)
 
 # Ensure 10% of the dataset is fraudulent
 print("Ensure 10 percent of the dataset is fraudulent ...")
-final_fraud_count = int(0.1 * final_size)
-final_non_fraud_count = final_size - final_fraud_count
+fraud_count = int(final_size * 0.1)
+fraudulent_sample = balanced_data[balanced_data['Is Laundering'] == 1].sample(n=fraud_count, random_state=42)
+non_fraudulent_sample = balanced_data[balanced_data['Is Laundering'] == 0].sample(n=final_size - fraud_count, random_state=42)
 
-fraud_transactions = sampled_data[sampled_data['Is Laundering'] == 1]
-non_fraud_transactions = sampled_data[sampled_data['Is Laundering'] == 0]
-
-if len(fraud_transactions) > final_fraud_count:
-    fraud_transactions = fraud_transactions.sample(n=final_fraud_count, random_state=42)
-if len(non_fraud_transactions) > final_non_fraud_count:
-    non_fraud_transactions = non_fraud_transactions.sample(n=final_non_fraud_count, random_state=42)
-
-balanced_data = pd.concat([fraud_transactions, non_fraud_transactions]).sample(frac=1, random_state=42).reset_index(drop=True)
+balanced_data = pd.concat([fraudulent_sample, non_fraudulent_sample]).sample(frac=1, random_state=42).reset_index(drop=True)
 
 print("Saving data ...")
-# Save the balanced dataset to a new CSV file
+# Save the balanced dataset
 balanced_data.to_csv("/var/scratch/hwg580/Balanced_HI-Large_Trans.csv", index=False)
 
 print("Balanced dataset created and saved to 'Balanced_HI-Large_Trans.csv'.")
