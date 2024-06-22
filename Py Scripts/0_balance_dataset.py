@@ -9,6 +9,13 @@ filename = '/var/scratch/hwg580/HI-Large_Trans.csv'
 data = pd.read_csv(filename, parse_dates=['Timestamp'], infer_datetime_format=True)
 
 print("Computing Statistics...")
+
+# Calculate the number of unique bank accounts
+unique_accounts = data['Bank Account'].nunique()
+
+print(f"Number of unique bank accounts: {unique_accounts}")
+
+
 # Compute statistics using Pandas operations
 total_transactions = len(data)
 fraudulent_transactions = data['Is Laundering'].sum()
