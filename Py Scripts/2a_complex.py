@@ -133,16 +133,24 @@ class GNNModel(nn.Module):
         return updated_edge_attr
     
     def complex(self, axw, ew, head_indices, tail_indices):
+        # Gather embeddings using indices
         heads = axw[head_indices]
         tails = axw[tail_indices]
 
-        # Perform the complex multiplication
-        complex_product = heads * ew * torch.conj(tails)
+        # Expand edge features for each head-tail pair
+        expanded_ew = ew.unsqueeze(0).expand_as(heads)
+
+        # Perform element-wise multiplication
+        complex_product = heads * expanded_ew * torch.conj(tails)
 
         # Sum along the appropriate dimension (dim=0 or dim=-1 based on your requirement)
         raw_scores = torch.sum(complex_product, dim=0)
-        normalized_scores = torch.sigmoid(raw_scores)  # Apply sigmoid activation
+
+        # Optionally apply sigmoid activation (if raw_scores are logits)
+        normalized_scores = torch.sigmoid(raw_scores)
+
         return normalized_scores
+
 
     def mapping(self, ew, edge_index):
         return edge_index[0], edge_index[1]
