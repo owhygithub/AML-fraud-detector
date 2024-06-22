@@ -35,12 +35,6 @@ with open(file_path, "rb") as f:
     saved_data = pickle.load(f)
 
 print("Loading data...")
-print("Splitting data...")
-print("Creating mask data...")
-print("Hyperparameter Tuning in Progress...")
-print("Saving Hyperparameters...")
-print("Loading Model...")
-print("Training Loop...")
 # Now, you can access the saved data using the keys used during saving
 dataset = saved_data['dataset']
 edges_features = saved_data['edges_features']
@@ -55,12 +49,15 @@ y = saved_data['y']
 input_data = saved_data['input_data']
 adjacency_tensor = saved_data['adjacency_tensor']
 
+print("Splitting data...")
 # Split the nodes into training, validation, and test sets
 num_edges = edges_features.shape[0]
 indices = list(range(num_edges))
 print(indices)
 train_indices, test_val_indices = train_test_split(indices, test_size=0.4, stratify=labels)
 val_indices, test_indices = train_test_split(test_val_indices, test_size=0.5, stratify=labels[test_val_indices])
+
+print("Creating mask data...")
 # Create masks
 train_mask = torch.tensor([i in train_indices for i in range(num_edges)], dtype=torch.bool)
 val_mask = torch.tensor([i in val_indices for i in range(num_edges)], dtype=torch.bool)
@@ -295,6 +292,7 @@ def objective(trial):
 
     return mean_recall
 
+print("Hyperparameter Tuning in Progress...")
 # Run Optuna optimization
 study = optuna.create_study(direction='maximize')
 study.optimize(objective, n_trials=32)  # Number of trials can be adjusted
@@ -319,7 +317,7 @@ best_annealing_rate = best_params['annealing_rate']
 annealing_epochs = best_params['annealing_epochs']
 
 # SAVE hyperparams for ComplEx
-
+print("Saving Hyperparameters...")
 with open("/var/scratch/hwg580/complex_hyperparams.pickle", "wb") as f:
     pickle.dump({
         'best_epochs': best_epochs,
@@ -344,6 +342,7 @@ dropout = best_dropout # dropout probability
 annealing_rate = best_annealing_rate  # Rate at which to decrease the learning rate
 annealing_epochs = annealing_epochs  # Number of epochs before decreasing learning rate
 
+print("Loading Model...")
 model = GNNModel(node_features=input_data.x.size(1), edge_features=input_data.edge_attr.size(1), out_channels=out_channels, dropout=dropout)
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 criterion = nn.BCEWithLogitsLoss()  # Binary classification loss
@@ -402,6 +401,7 @@ precision_list = []
 recall_list = []
 f1_list = []
 
+print("Training Loop...")
 for epoch in range(epochs):
     # Adjust learning rate based on annealing schedule
     if epoch % annealing_epochs == 0 and epoch != 0:
@@ -599,6 +599,8 @@ for metric_name, metric_value in metrics_dict.items():
     else:
         print(f"{metric_name}: {metric_value}")
     print()
+
+print("Testing...")
 # TEST DATA
 test_x_embedding, test_e_embedding, test_scores, test_loss = test(input_data)
 print(f"Test Loss: {test_loss:.4f}")

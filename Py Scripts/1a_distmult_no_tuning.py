@@ -472,6 +472,7 @@ for metric_name, metric_value in metrics_dict.items():
         print(f"{metric_name}: {metric_value}")
     print()
 
+print("Testing...")
 # TESTING
 test_x_embedding, test_e_embedding, test_scores, test_loss = test(input_data)
 
