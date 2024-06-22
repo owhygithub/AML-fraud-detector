@@ -74,7 +74,6 @@ class GNNLayer(MessagePassing):
         self.edge_features = edge_features
         self.out_channels = out_channels
         self.dropout = nn.Dropout(dropout)
-        
         # Learnable parameters
         self.weight_node = nn.Parameter(torch.Tensor(node_features, out_channels))
         self.weight_edge = nn.Parameter(torch.Tensor(edge_features, out_channels))
@@ -88,10 +87,8 @@ class GNNLayer(MessagePassing):
         # AXW0 + EW1
         global adjacency_tensor
         self.adjacency_matrix = adjacency_tensor
-        
         axw = torch.sparse.mm(self.adjacency_matrix, x) @ self.weight_node
         ew = torch.matmul(edge_attr, self.weight_edge)
-
         axw = self.dropout(axw)  # Apply dropout to node features
         ew = self.dropout(ew)    # Apply dropout to edge features
 
@@ -104,14 +101,10 @@ class GNNModel(nn.Module):
     def __init__(self, node_features, edge_features, out_channels, dropout):
         super(GNNModel, self).__init__()
         self.conv1 = GNNLayer(node_features, edge_features, out_channels, dropout)
-
-        # self.threshold = nn.Parameter(torch.tensor([0.5]))  # Trainable threshold parameter
     
     def forward(self, x, edge_index, edge_attr):
         axw1, ew1 = self.conv1(x, edge_index, edge_attr)
-
         head_indices, tail_indices = self.mapping(ew1, edge_index)
-        # scores = self.dismult(axw1, ew1, head_indices, tail_indices)
         scores = self.dismult(axw1, ew1, head_indices, tail_indices)
         
         return axw1, ew1, scores # returning x and e embeddings
@@ -125,53 +118,14 @@ class GNNModel(nn.Module):
         return updated_edge_attr
     
     def dismult(self, axw, ew, head_indices, tail_indices):
-        scores = []
-        heads = []
-        tails = []
-        relations = []
-        for i in range(ew.size()[0]): # going through all triples
-            head = axw[head_indices[i]]
-            tail = axw[tail_indices[i]]
-            relation = ew[i]
-            heads.append(head)
-            tails.append(tail)
-            relations.append(relation)
-            raw_score = torch.sum(head * relation * tail, dim=-1)
-            # print(raw_score)
-            normalized_score = torch.sigmoid(raw_score)  # Apply sigmoid activation
-            scores.append(raw_score) # calc scores
-        scores = torch.stack(scores)
-        return scores
+        heads = axw[head_indices]
+        tails = axw[tail_indices]
+        raw_scores = torch.sum(heads * ew * tails, dim=-1)
+        normalized_scores = torch.sigmoid(raw_scores)  # Apply sigmoid activation
+        return normalized_scores
 
-    def complex(self, axw, ew, head_indices, tail_indices):
-        scores = []
-        heads = []
-        tails = []
-        relations = []
-        for i in range(ew.size()[0]): # going through all triples
-            head = axw[head_indices[i]]
-            tail = axw[tail_indices[i]]
-            relation = ew[i]
-            heads.append(head)
-            tails.append(tail)
-            relations.append(relation)
-            # ComplEx
-            raw_score = torch.real(torch.sum(head * relation * torch.conj(tail), dim=0)) # TODO add a learnable element to the function for better performance 
-            normalized_score = torch.sigmoid(raw_score)  # Apply sigmoid activation
-            scores.append(raw_score) # calc scores
-        scores = torch.stack(scores)
-        return scores
-    
     def mapping(self, ew, edge_index):
-        head_indices = []
-        tail_indices = []
-        for c in range(ew.size()[0]): # getting all indices
-            head_index = edge_index[0][c]
-            tail_index = edge_index[1][c]
-            head_indices.append(head_index)
-            tail_indices.append(tail_index)
-        
-        return head_indices, tail_indices
+        return edge_index[0], edge_index[1]
 
 print("Hyperparameter Tuning in Progress...")
 # HYPERPARAMS
