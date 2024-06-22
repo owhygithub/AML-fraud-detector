@@ -25,7 +25,7 @@ import pickle
 
 print("Started the program...")
 # Specify the file path where the data is saved
-file_path = "/var/scratch/hwg580/graph.pickle"
+file_path = "/var/scratch/hwg580/graph_Balanced_HI-Large_Trans.pickle"
 
 print("Loading data from Data Pickle...")
 # Load the data from the file
@@ -255,32 +255,18 @@ def assign_predictions(val_scores, threshold=0.5):
     # Assign labels based on a threshold
     predicted_labels = (val_scores >= threshold).float()
     return predicted_labels
+
 def calculate_mrr(sorted_indices, true_values):
-    # print("Calculating MRR...")
-    rank = 0
-    count = 0
+    positive_indices = torch.nonzero(true_values).squeeze()
+    if positive_indices.numel() == 0:
+        return 0.0
 
-    print(len(true_values))
+    # Map positive indices to their ranks in the sorted list
+    ranks = torch.nonzero(sorted_indices.unsqueeze(1) == positive_indices.unsqueeze(0)).float()[:, 0] + 1
 
-    for i in range( len(true_values) ):
-        if true_values[i] == 1: # should only be the positive ones --> 600
-            print( true_values[i] )
-            count += 1
-            for j in range( len(sorted_indices) ):
-                if sorted_indices[j] == i:
-                    # print(f"sorted indices: {sorted_indices[j]}")
-                    # print(f"i: {i}")
-                    position = j+1
-                    # print(f"position: {position}")
-                    break
-            rank += 1/position
-            # print(f"rank - individual: {rank}")
-    print(f"Count - {count}")
-    # print(f"rank: {rank}")
-    # print(f"n of true values: {count}")
-    mrr = rank / count
-    # print("MRR Calculated...")
+    mrr = (1.0 / ranks).mean().item()
     return mrr
+
 # Continue training loop from provided script
 losses = []
 val_losses = []

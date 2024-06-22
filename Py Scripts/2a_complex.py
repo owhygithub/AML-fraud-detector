@@ -28,7 +28,7 @@ import pickle
 
 print("Started the program...")
 # Specify the file path where the data is saved
-file_path = "/var/scratch/hwg580/graph.pickle"
+file_path = "/var/scratch/hwg580/graph_Balanced_HI-Large_Trans.pickle"
 
 # Load the data from the file
 with open(file_path, "rb") as f:
@@ -179,7 +179,7 @@ class GNNModel(nn.Module):
         
         return head_indices, tail_indices
     
-# HYPERPARAMATER TUNING
+# HYPERPARAMS
 def assign_predictions(val_scores, threshold=0.5):
     # Assign labels based on a threshold
     predicted_labels = (val_scores >= threshold).float()
@@ -196,112 +196,63 @@ def objective(trial):
     annealing_rate = trial.suggest_categorical('annealing_rate', [0.01, 0.001])
     annealing_epochs = trial.suggest_categorical('annealing_epochs', [10, 20])
 
-    # Initialize k-fold
-    k = 5
-    kf = KFold(n_splits=k, shuffle=True, random_state=42)
+    model = GNNModel(node_features=input_data.x.size(1), edge_features=input_data.edge_attr.size(1), out_channels=out_channels, dropout=dropout)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    criterion = nn.BCEWithLogitsLoss()
 
-    # Initialize metrics storage
-    all_losses = []
-    all_val_losses = []
-    all_accuracies = []
-    all_precisions = []
-    all_recalls = []
-    all_f1s = []
+    # Training function
+    def train(data):
+        model.train()
+        optimizer.zero_grad()
+        x_embedding, e_embedding, scores = model(data.x, data.edge_index[:, train_mask], data.edge_attr[train_mask])
+        loss = criterion(scores, labels[train_mask].float())
+        loss.backward()
+        optimizer.step()
+        return loss.item()
 
-    # Training with k-fold cross-validation
-    for fold, (train_indices, val_indices) in enumerate(kf.split(range(input_data.edge_attr.shape[0]))):
-        patience_counter = 0
-        print(f"Fold {fold + 1}/{k}")
+    # Validation function
+    def validate(data):
+        model.eval()
+        with torch.no_grad():
+            _, _, scores = model(data.x, data.edge_index[:, val_mask], data.edge_attr[val_mask])
+            val_loss = criterion(scores, labels[val_mask].float()).item()
+        return val_loss
 
-        # Create masks
-        train_mask = torch.tensor([i in train_indices for i in range(input_data.edge_attr.shape[0])], dtype=torch.bool)
-        val_mask = torch.tensor([i in val_indices for i in range(input_data.edge_attr.shape[0])], dtype=torch.bool)
+    # Training loop
+    best_val_loss = float('inf')
+    patience_counter = 0
+    patience = 2  # Stricter patience
 
-        # Initialize model, optimizer, and loss function for each fold
-        model = GNNModel(node_features=input_data.x.size(1), edge_features=input_data.edge_attr.size(1), out_channels=out_channels, dropout=dropout)
-        optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
-        criterion = nn.BCEWithLogitsLoss()
+    for epoch in range(epochs):
+        # Adjust learning rate based on annealing schedule
+        if epoch % annealing_epochs == 0 and epoch != 0:
+            new_learning_rate = lr * math.exp(-annealing_rate * epoch)
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = new_learning_rate
+                
+        # Training
+        train(input_data)
+        # Validation
+        val_loss = validate(input_data)
 
-        losses = []
-        val_losses = []
-        accuracy_list = []
-        precision_list = []
-        recall_list = []
-        f1_list = []
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            patience_counter = 0
+        else:
+            patience_counter += 1
+            if patience_counter > patience:
+                break
 
-        best_val_loss = float('inf')
-        patience = 2  # Stricter patience
+    # Evaluate on validation set
+    model.eval()
+    with torch.no_grad():
+        _, _, val_scores = model(input_data.x, input_data.edge_index[:, val_mask], input_data.edge_attr[val_mask])
+    val_labels = labels[val_mask]
+    predictions = (val_scores >= 0.5).float()
 
-        for epoch in range(epochs):
-            # Adjust learning rate based on annealing schedule
-            if epoch % annealing_epochs == 0 and epoch != 0:
-                new_learning_rate = lr * math.exp(-annealing_rate * epoch)
-                for param_group in optimizer.param_groups:
-                    param_group['lr'] = new_learning_rate
+    recall = recall_score(val_labels.cpu(), predictions.cpu())
+    return recall
 
-            # Training
-            model.train()
-            optimizer.zero_grad()
-            x_embedding, e_embedding, scores = model(input_data.x, input_data.edge_index[:, train_mask], input_data.edge_attr[train_mask])
-            loss = criterion(scores, labels[train_mask].float())
-            loss.backward()
-            optimizer.step()
-
-            # Validation
-            model.eval()
-            with torch.no_grad():
-                _, _, val_scores = model(input_data.x, input_data.edge_index[:, val_mask], input_data.edge_attr[val_mask])
-                val_loss = criterion(val_scores, labels[val_mask].float()).item()
-
-            losses.append(loss.item())
-            val_losses.append(val_loss)
-
-            val_labels = labels[val_mask]
-            val_predictions = (val_scores >= 0.5).float()
-
-            val_accuracy = accuracy_score(val_labels.cpu(), val_predictions.cpu())
-            val_precision = precision_score(val_labels.cpu(), val_predictions.cpu())
-            val_recall = recall_score(val_labels.cpu(), val_predictions.cpu())
-            val_f1 = f1_score(val_labels.cpu(), val_predictions.cpu())
-
-            accuracy_list.append(val_accuracy)
-            precision_list.append(val_precision)
-            recall_list.append(val_recall)
-            f1_list.append(val_f1)
-
-            print(f"Epoch {epoch}, Training Loss: {loss:.4f}, Validation Loss: {val_loss:.4f}")
-            print(f"Accuracy: {val_accuracy:.4f}, Precision: {val_precision:.4f}, Recall: {val_recall:.4f}, F1 Score: {val_f1:.4f}")
-
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
-                patience_counter = 0
-            else:
-                patience_counter += 1
-                if patience_counter > patience:
-                    print(f"Validation loss hasn't improved for {patience} epochs. Early stopping...")
-                    break
-
-        all_losses.append(losses)
-        all_val_losses.append(val_losses)
-        all_accuracies.append(accuracy_list)
-        all_precisions.append(precision_list)
-        all_recalls.append(recall_list)
-        all_f1s.append(f1_list)
-
-        print(f"Finished fold {fold + 1}")
-
-    # Average metrics across all folds
-    mean_val_loss = sum([sum(loss) / len(loss) for loss in all_val_losses]) / k
-    mean_accuracy = sum([sum(acc) / len(acc) for acc in all_accuracies]) / k
-    mean_precision = sum([sum(prec) / len(prec) for prec in all_precisions]) / k
-    mean_recall = sum([sum(rec) / len(rec) for rec in all_recalls]) / k
-    mean_f1 = sum([sum(f1) / len(f1) for f1 in all_f1s]) / k
-
-    print(f"Mean Validation Loss: {mean_val_loss:.4f}, Mean Accuracy: {mean_accuracy:.4f}, Mean Precision: {mean_precision:.4f}, Mean Recall: {mean_recall:.4f}, Mean F1 Score: {mean_f1:.4f}")
-
-    return mean_recall
-
-print("Hyperparameter Tuning in Progress...")
 # Run Optuna optimization
 study = optuna.create_study(direction='maximize')
 study.optimize(objective, n_trials=32)  # Number of trials can be adjusted
@@ -509,27 +460,18 @@ plt.legend()
 
 plt.tight_layout()
 plt.show()
+
 def calculate_mrr(sorted_indices, true_values):
-    # print("Calculating MRR...")
-    rank = 0
-    count = 0
-    for i in range( len(true_values) ):
-        if true_values[i] == 1: # should only be the positive ones --> 600
-            count += 1
-            for j in range( len(sorted_indices) ):
-                if sorted_indices[j] == i:
-                    # print(f"sorted indices: {sorted_indices[j]}")
-                    # print(f"i: {i}")
-                    position = j+1
-                    # print(f"position: {position}")
-                    break
-            rank += 1/position
-            # print(f"rank - individual: {rank}")
-    # print(f"rank: {rank}")
-    # print(f"n of true values: {count}")
-    mrr = rank / count
-    # print("MRR Calculated...")
+    positive_indices = torch.nonzero(true_values).squeeze()
+    if positive_indices.numel() == 0:
+        return 0.0
+
+    # Map positive indices to their ranks in the sorted list
+    ranks = torch.nonzero(sorted_indices.unsqueeze(1) == positive_indices.unsqueeze(0)).float()[:, 0] + 1
+
+    mrr = (1.0 / ranks).mean().item()
     return mrr
+
 def evaluate_model(predictions, true_values, sorted_indices, mask):
 
     true_values = true_values[mask].float()
@@ -587,6 +529,7 @@ def evaluate_model(predictions, true_values, sorted_indices, mask):
     plt.show()
 
     return metrics_dict
+
 metrics_dict = evaluate_model(predictions, labels, sorted_indices, val_mask)
 
 # Print Evaluation Metrics
@@ -610,6 +553,7 @@ for metric_name, metric_value in metrics_dict.items():
     print()
 
 print("Testing...")
+
 # TEST DATA
 test_x_embedding, test_e_embedding, test_scores, test_loss = test(input_data)
 print(f"Test Loss: {test_loss:.4f}")

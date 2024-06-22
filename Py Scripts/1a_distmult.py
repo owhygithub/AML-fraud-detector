@@ -24,7 +24,7 @@ import pickle
 
 print("Started the program...")
 # Specify the file path where the data is saved
-file_path = "/var/scratch/hwg580/graph_HI-Small_Trans_half.pickle"
+file_path = "/var/scratch/hwg580/graph_Balanced_HI-Large_Trans.pickle"
 
 # Load the data from the file
 with open(file_path, "rb") as f:
@@ -128,6 +128,7 @@ class GNNModel(nn.Module):
         return edge_index[0], edge_index[1]
 
 print("Hyperparameter Tuning in Progress...")
+
 # HYPERPARAMS
 def assign_predictions(val_scores, threshold=0.5):
     # Assign labels based on a threshold
@@ -203,27 +204,35 @@ def objective(trial):
     return recall
 
 # Run Optuna optimization
-# study = optuna.create_study(direction='maximize')
-# study.optimize(objective, n_trials=32)  # Number of trials can be adjusted
+study = optuna.create_study(direction='maximize')
+study.optimize(objective, n_trials=32)  # Number of trials can be adjusted
 
-# # Print best trial
-# print("Best trial:")
-# trial = study.best_trial
+# Print best trial
+print("Best trial:")
+trial = study.best_trial
 
-# print("  Recall: {}".format(trial.value))
-# print("  Best hyperparameters: {}".format(trial.params))
+print("  Recall: {}".format(trial.value))
+print("  Best hyperparameters: {}".format(trial.params))
 
-# # Best hyperparameters
-# best_params = trial.params
+# Best hyperparameters
+best_params = trial.params
 
 # Now, you can use the best hyperparameters to train your final model
-best_epochs = 100
-best_lr = 0.001
-best_out_channels = 10
-best_weight_decay = 0.00005
-best_dropout = 0.5
-best_annealing_rate = 0.0001
-best_annealing_epochs = 10
+# best_epochs = 100
+# best_lr = 0.001
+# best_out_channels = 10
+# best_weight_decay = 0.00005
+# best_dropout = 0.5
+# best_annealing_rate = 0.0001
+# best_annealing_epochs = 10
+
+best_epochs = best_params['epochs']
+best_lr = best_params['lr']
+best_out_channels = best_params['out_channels']
+best_weight_decay = best_params['weight_decay']
+best_dropout = best_params['dropout']
+best_annealing_rate = best_params['annealing_rate']
+annealing_epochs = best_params['annealing_epochs']
 
 # SAVE hyperparams for DistMult
 print("Saving Hyperparameters...")

@@ -12,19 +12,19 @@ data = dd.read_csv(filename, parse_dates=['Timestamp'], infer_datetime_format=Tr
 print("Creating balanced dataset...")
 
 # Find fraudulent transactions indices
-fraud_indices = data[data['Is Laundering'] == 1].index.compute()
+fraud_indices = data[data['Is Laundering'] == 1].index
 
 # Find connected non-fraudulent transactions using a set for faster lookup
 print("Identify non-fraudulent transactions connected to fraudulent ones ...")
-connected_accounts = set(data.loc[fraud_indices, 'Account'].compute().unique()).union(set(data.loc[fraud_indices, 'To Bank'].compute().unique()))
+connected_accounts = set(data.loc[fraud_indices, 'Account'].unique().compute()).union(set(data.loc[fraud_indices, 'To Bank'].unique().compute()))
 
 # Filter non-fraudulent transactions that are connected to fraudulent ones
 print("Filter non-fraudulent transactions that are connected to fraudulent ones ...")
-connected_non_fraud_indices = data[(data['Is Laundering'] == 0) & (data['Account'].isin(connected_accounts) | data['To Bank'].isin(connected_accounts))].index.compute()
+connected_non_fraud_indices = data[(data['Is Laundering'] == 0) & (data['Account'].isin(connected_accounts) | data['To Bank'].isin(connected_accounts))].index
 
 # Combine indices of fraudulent and connected non-fraudulent transactions
 print("Combine fraudulent and connected non-fraudulent transactions ...")
-combined_indices = np.concatenate((fraud_indices.to_numpy(), connected_non_fraud_indices.to_numpy()))
+combined_indices = dd.concat([fraud_indices, connected_non_fraud_indices]).compute()
 
 # Sample from combined indices to create a balanced dataset
 print("Ensure the final dataset size is between 3 to 5 million transactions ...")
