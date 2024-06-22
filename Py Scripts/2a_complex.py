@@ -136,12 +136,11 @@ class GNNModel(nn.Module):
         heads = axw[head_indices]
         tails = axw[tail_indices]
 
-        # Assuming heads and tails are complex numbers
-        heads = torch.complex(heads, torch.zeros_like(heads))  # Convert to complex tensor
-        tails = torch.complex(tails, torch.zeros_like(tails))  # Convert to complex tensor
-    
-        # raw_scores = torch.sum(heads * ew * tails, dim=-1)
-        raw_scores = torch.real(torch.sum(heads * ew * torch.conj(tails), dim=0))
+        # Perform the complex multiplication
+        complex_product = heads * ew * torch.conj(tails)
+
+        # Sum along the appropriate dimension (dim=0 or dim=-1 based on your requirement)
+        raw_scores = torch.sum(complex_product, dim=0)
         normalized_scores = torch.sigmoid(raw_scores)  # Apply sigmoid activation
         return normalized_scores
 
