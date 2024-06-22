@@ -72,7 +72,18 @@ val_mask[val_indices] = True
 test_mask[test_indices] = True
 print("Mask data created...")
 
-# GRAPH NEURAL NETWORKS
+def calculate_mrr(sorted_indices, true_values):
+    positive_indices = torch.nonzero(true_values).squeeze()
+    if positive_indices.numel() == 0:
+        return 0.0
+
+    # Map positive indices to their ranks in the sorted list
+    ranks = torch.nonzero(sorted_indices.unsqueeze(1) == positive_indices.unsqueeze(0)).float()[:, 0] + 1
+
+    mrr = (1.0 / ranks).mean().item()
+    return mrr
+
+# GNN
 class GNNLayer(MessagePassing):
     def __init__(self, node_features, edge_features, out_channels, dropout):
         super(GNNLayer, self).__init__(aggr='add')
@@ -80,7 +91,6 @@ class GNNLayer(MessagePassing):
         self.edge_features = edge_features
         self.out_channels = out_channels
         self.dropout = nn.Dropout(dropout)
-        
         # Learnable parameters
         self.weight_node = nn.Parameter(torch.Tensor(node_features, out_channels))
         self.weight_edge = nn.Parameter(torch.Tensor(edge_features, out_channels))
@@ -93,11 +103,9 @@ class GNNLayer(MessagePassing):
     def forward(self, x, edge_index, edge_attr):
         # AXW0 + EW1
         global adjacency_tensor
-        self.adjacency_matrix = adjacency_matrix
-        
+        self.adjacency_matrix = adjacency_tensor
         axw = torch.sparse.mm(self.adjacency_matrix, x) @ self.weight_node
         ew = torch.matmul(edge_attr, self.weight_edge)
-
         axw = self.dropout(axw)  # Apply dropout to node features
         ew = self.dropout(ew)    # Apply dropout to edge features
 
@@ -105,19 +113,15 @@ class GNNLayer(MessagePassing):
 
     def update(self, aggr_out):
         return aggr_out
-    
+
 class GNNModel(nn.Module):
     def __init__(self, node_features, edge_features, out_channels, dropout):
         super(GNNModel, self).__init__()
         self.conv1 = GNNLayer(node_features, edge_features, out_channels, dropout)
-
-        # self.threshold = nn.Parameter(torch.tensor([0.5]))  # Trainable threshold parameter
     
     def forward(self, x, edge_index, edge_attr):
         axw1, ew1 = self.conv1(x, edge_index, edge_attr)
-
         head_indices, tail_indices = self.mapping(ew1, edge_index)
-        # scores = self.dismult(axw1, ew1, head_indices, tail_indices)
         scores = self.complex(axw1, ew1, head_indices, tail_indices)
         
         return axw1, ew1, scores # returning x and e embeddings
@@ -130,54 +134,16 @@ class GNNModel(nn.Module):
             updated_edge_attr = edge_attr[:, :new_channels]
         return updated_edge_attr
     
-    def dismult(self, axw, ew, head_indices, tail_indices):
-        scores = []
-        heads = []
-        tails = []
-        relations = []
-        for i in range(ew.size()[0]): # going through all triples
-            head = axw[head_indices[i]]
-            tail = axw[tail_indices[i]]
-            relation = ew[i]
-            heads.append(head)
-            tails.append(tail)
-            relations.append(relation)
-            raw_score = torch.sum(head * relation * tail, dim=-1)
-            # print(raw_score)
-            normalized_score = torch.sigmoid(raw_score)  # Apply sigmoid activation
-            scores.append(raw_score) # calc scores
-        scores = torch.stack(scores)
-        return scores
-
     def complex(self, axw, ew, head_indices, tail_indices):
-        scores = []
-        heads = []
-        tails = []
-        relations = []
-        for i in range(ew.size()[0]): # going through all triples
-            head = axw[head_indices[i]]
-            tail = axw[tail_indices[i]]
-            relation = ew[i]
-            heads.append(head)
-            tails.append(tail)
-            relations.append(relation)
-            # ComplEx
-            raw_score = torch.real(torch.sum(head * relation * torch.conj(tail), dim=0)) # TODO add a learnable element to the function for better performance 
-            normalized_score = torch.sigmoid(raw_score)  # Apply sigmoid activation
-            scores.append(raw_score) # calc scores
-        scores = torch.stack(scores)
-        return scores
-    
+        heads = axw[head_indices]
+        tails = axw[tail_indices]
+        # raw_scores = torch.sum(heads * ew * tails, dim=-1)
+        raw_scores = torch.real(torch.sum(heads * ew * torch.conj(tails), dim=0))
+        normalized_scores = torch.sigmoid(raw_scores)  # Apply sigmoid activation
+        return normalized_scores
+
     def mapping(self, ew, edge_index):
-        head_indices = []
-        tail_indices = []
-        for c in range(ew.size()[0]): # getting all indices
-            head_index = edge_index[0][c]
-            tail_index = edge_index[1][c]
-            head_indices.append(head_index)
-            tail_indices.append(tail_index)
-        
-        return head_indices, tail_indices
+        return edge_index[0], edge_index[1]
     
 # HYPERPARAMS
 def assign_predictions(val_scores, threshold=0.5):
@@ -332,6 +298,7 @@ def test(data):
         x_embedding, e_embedding, scores = model(data.x, data.edge_index[:, test_mask], data.edge_attr[test_mask])
         test_loss = criterion(scores, labels[test_mask].float()).item()
     return x_embedding, e_embedding, scores, test_loss
+
 def assign_top_n_predictions(val_scores, val_labels):
     # Sort indices of val_scores in descending order
     sorted_indices = torch.argsort(val_scores, descending=True)
@@ -346,131 +313,256 @@ def assign_top_n_predictions(val_scores, val_labels):
     predicted_labels[sorted_indices[:num_ones]] = 1
 
     return predicted_labels, sorted_indices
-# Continue training loop from provided script
-losses = []
-val_losses = []
-best_val_loss = float('inf')
-patience = 10
-
-all_x_embeddings = []
-all_e_embeddings = []
-
-# Storage for metrics
-accuracy_list = []
-precision_list = []
-recall_list = []
-f1_list = []
 
 print("Training Loop...")
-for epoch in range(epochs):
-    # Adjust learning rate based on annealing schedule
-    if epoch % annealing_epochs == 0 and epoch != 0:
-        new_learning_rate = learning_rate * math.exp(-annealing_rate * epoch)
-        for param_group in optimizer.param_groups:
-            param_group['lr'] = new_learning_rate
+# K-fold Cross-Validation
+k = 5
+kf = KFold(n_splits=k, shuffle=True, random_state=42)
+patience = 10
+
+# Storage for metrics across folds
+fold_accuracy_list = []
+fold_precision_list = []
+fold_recall_list = []
+fold_f1_list = []
+fold_mrr_list = []
+best_model_state = None
+best_val_loss = float('inf')
+best_train_losses = []
+best_val_losses = []
+best_val_accuracies = []
+best_epoch_metrics = {
+    'accuracy': [],
+    'precision': [],
+    'recall': [],
+    'f1': [],
+    'mrr': [],
+    'train_loss': [],
+    'val_loss': []
+}
+
+for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(input_data.edge_attr.shape[0]))):
+    print(f"\nFold {fold + 1}/{k}")
+
+    print("Creating mask data...")
+    train_fold_mask = torch.zeros(input_data.edge_attr.shape[0], dtype=torch.bool)
+    val_fold_mask = torch.zeros(input_data.edge_attr.shape[0], dtype=torch.bool)
+
+    train_fold_mask[train_fold_indices] = True
+    val_fold_mask[val_fold_indices] = True
+    print("Mask data created...")
+
+    # Initialize model, optimizer, and loss function for each fold
+    print("Loading Model...")
+    model = GNNModel(node_features=input_data.x.size(1), edge_features=input_data.edge_attr.size(1), out_channels=out_channels, dropout=dropout)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+    criterion = nn.BCEWithLogitsLoss()
+    print("Model. optimizer, criterion Loaded...")
+
+    train_losses = []
+    val_losses = []
+    val_accuracies = []
+    best_fold_val_loss = float('inf')
+    best_fold_train_losses = []
+    best_fold_epoch_metrics = {
+        'accuracy': [],
+        'precision': [],
+        'recall': [],
+        'f1': [],
+        'mrr': [],
+        'train_loss': [],
+        'val_loss': [],
+        'val_predictions': [],
+        'sorted_indices': []
+    }
+    patience_counter = 0
+    print("Lists created...")
+
+    for epoch in range(epochs):
+        print(f"\tIn Epoch {epoch + 1}...")
+        # Adjust learning rate based on annealing schedule
+        if epoch % annealing_epochs == 0 and epoch != 0:
+            new_learning_rate = learning_rate * math.exp(-annealing_rate * epoch)
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = new_learning_rate
+
+        print(f"Training model...")
+        # Training
+        model.train()
+        print(f"Applying Zero Grad...")
+        optimizer.zero_grad()
+        print(f"Getting scores & embeddings...")
+        x_embedding, e_embedding, scores = model(input_data.x, input_data.edge_index[:, train_fold_mask], input_data.edge_attr[train_fold_mask])
+        print(f"Calculating Loss...")
+        loss = criterion(scores, labels[train_fold_mask].float())
+        print(f"Backpropagation...")
+        loss.backward()
+        print(f"Optimizer...")
+        optimizer.step()
+
+        print(f"Validation evaluation....")
+        # Validation
+        model.eval()
+        print(f"Getting validation scores & embeddings....")
+        with torch.no_grad():
+            val_x_embedding, val_e_embedding, val_scores = model(input_data.x, input_data.edge_index[:, val_fold_mask], input_data.edge_attr[val_fold_mask])
+            val_loss = criterion(val_scores, labels[val_fold_mask].float()).item()
+
+        print(f"Losses....")
+        train_losses.append(loss.item())
+        val_losses.append(val_loss)
+
+        print(f"Labels....")
+        train_labels = labels[train_fold_mask]
+        val_labels = labels[val_fold_mask]
+
+        print(f"Calculating Metrics....")
+        # Calculate metrics
+        train_predictions = assign_predictions(scores)
+        val_predictions = assign_predictions(val_scores)
+
+        sorted_indices = torch.argsort(val_scores, descending=True)
+
+        print(f"Accuracy, precision, recall, f1...")
+        val_accuracy = accuracy_score(val_labels, val_predictions)
+        val_precision = precision_score(val_labels, val_predictions)
+        val_recall = recall_score(val_labels, val_predictions)
+        val_f1 = f1_score(val_labels, val_predictions)
+
+        print(f"Calculating MRR...")
+        val_mrr = calculate_mrr(torch.argsort(val_scores, descending=True), val_labels)
+
+        print(f"\nEpoch {epoch}, Training Loss: {loss:.4f}, Validation Loss: {val_loss:.4f}")
+        print(f"Accuracy: {val_accuracy:.4f}, Precision: {val_precision:.4f}, Recall: {val_recall:.4f}, F1 Score: {val_f1:.4f}, MRR: {val_mrr:.4f}")
+
+        print(f"Storing Metrics....")
+        # Store metrics for the current epoch
+        best_fold_epoch_metrics['accuracy'].append(val_accuracy)
+        best_fold_epoch_metrics['precision'].append(val_precision)
+        best_fold_epoch_metrics['recall'].append(val_recall)
+        best_fold_epoch_metrics['f1'].append(val_f1)
+        best_fold_epoch_metrics['mrr'].append(val_mrr)
+        best_fold_epoch_metrics['train_loss'].append(loss.item())
+        best_fold_epoch_metrics['val_loss'].append(val_loss)
+        best_fold_epoch_metrics['val_predictions'].append(val_predictions)
+        best_fold_epoch_metrics['sorted_indices'].append(sorted_indices)
+
+        # Early stopping based on validation loss
+        if val_loss < best_fold_val_loss:
+            best_fold_val_loss = val_loss
+            best_fold_train_losses = train_losses.copy()
+            best_fold_epoch_metrics['accuracy'].append(val_accuracy)
+            best_fold_epoch_metrics['precision'].append(val_precision)
+            best_fold_epoch_metrics['recall'].append(val_recall)
+            best_fold_epoch_metrics['f1'].append(val_f1)
+            best_fold_epoch_metrics['mrr'].append(val_mrr)
+            best_fold_epoch_metrics['val_predictions'].append(val_predictions)
+            best_fold_epoch_metrics['sorted_indices'].append(sorted_indices)
             
-    loss, x_embedding, e_embedding, scores = train(input_data)
-    val_x_embedding, val_e_embedding, val_scores, val_loss = validate(input_data)
+            patience_counter = 0
+            
+            if best_fold_val_loss < best_val_loss:
+                best_val_loss = best_fold_val_loss
+                best_model_state = model.state_dict()
+                best_val_accuracies = val_accuracies.copy()
+        else:
+            patience_counter += 1
+            if patience_counter > patience:
+                print(f"Validation loss hasn't improved for {patience} epochs. Early stopping...")
+                break
 
-    losses.append(loss)
-    val_losses.append(val_loss)
+    print(f"Storing Metrics for fold....")
+    # Store metrics for the fold
+    fold_accuracy_list.append(best_fold_epoch_metrics['best_accuracy'])
+    fold_precision_list.append(best_fold_epoch_metrics['best_precision'])
+    fold_recall_list.append(best_fold_epoch_metrics['best_recall'])
+    fold_f1_list.append(best_fold_epoch_metrics['best_f1'])
+    fold_mrr_list.append(best_fold_epoch_metrics['best_mrr'])
 
-    all_x_embeddings.append(x_embedding.detach().cpu().numpy())
-    all_e_embeddings.append(e_embedding.detach().cpu().numpy())
-    # print(f"This is Fraudulent - {scores[8000]}")
-    # print(f"This is Not fraudulent - {scores[2000]}")
+    print(f"Storing Metrics for best model in fold....")
+    # Store losses for the best model of the fold
+    best_epoch_metrics['accuracy'].append(best_fold_epoch_metrics['accuracy'])
+    best_epoch_metrics['precision'].append(best_fold_epoch_metrics['precision'])
+    best_epoch_metrics['recall'].append(best_fold_epoch_metrics['recall'])
+    best_epoch_metrics['f1'].append(best_fold_epoch_metrics['f1'])
+    best_epoch_metrics['mrr'].append(best_fold_epoch_metrics['mrr'])
+    best_epoch_metrics['train_loss'].append(best_fold_epoch_metrics['train_loss'])
+    best_epoch_metrics['val_loss'].append(best_fold_epoch_metrics['val_loss'])
 
-    val_labels = labels[val_mask]
-    # predictions, sorted_indices = assign_top_n_predictions(val_scores, val_labels)
-    predictions = assign_predictions(val_scores)
-    sorted_indices = torch.argsort(val_scores, descending=True)
+    print(f"Fold {fold + 1} - Accuracy: {fold_accuracy_list[-1]:.4f}, Precision: {fold_precision_list[-1]:.4f}, Recall: {fold_recall_list[-1]:.4f}, F1 Score: {fold_f1_list[-1]:.4f}")
 
-    # Calculate evaluation metrics
-    accuracy = accuracy_score(val_labels, predictions)
-    precision = precision_score(val_labels, predictions)
-    recall = recall_score(val_labels, predictions)
-    f1 = f1_score(val_labels, predictions)
+# Print best model's evaluation metrics
+print("\nBest Model Evaluation Metrics:")
+print(f"Accuracy: {np.mean(fold_accuracy_list):.4f}")
+print(f"Precision: {np.mean(fold_precision_list):.4f}")
+print(f"Recall: {np.mean(fold_recall_list):.4f}")
+print(f"F1 Score: {np.mean(fold_f1_list):.4f}")
+print(f"MRR: {np.mean(fold_mrr_list):.4f}")
 
-    # Append metrics to respective lists
-    accuracy_list.append(accuracy)
-    precision_list.append(precision)
-    recall_list.append(recall)
-    f1_list.append(f1)
+val_predictions = best_fold_epoch_metrics['val_predictions']
+sorted_indices = best_fold_epoch_metrics['sorted_indices']
 
-    print(f"\nEpoch {epoch}, Training Loss: {loss:.4f}, Validation Loss: {val_loss:.4f}")
-    print(f"Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1 Score: {f1:.4f}")
-    if epoch % 10 == 0 and epoch != 0:
-        # calculate MRR
-        # mrr = calculate_mrr(sorted_indices, val_labels)
-        mrr = calculate_mrr(sorted_indices, val_labels) # TODO MRR USING SORTED INDICES? WHY?
-        print(f"This is the MRR for epoch {epoch}: {mrr}")
-    # EARLY STOPPING CHECK 
-    if val_loss < best_val_loss:
-        best_val_loss = val_loss
-        patience_counter = 0
-        # Save the model if validation loss improves
-        torch.save(model.state_dict(), f'/var/scratch/hwg580/{model_name}.pt')
-    else:
-        patience_counter += 1
-        if patience_counter > patience:
-            print(f"Validation loss hasn't improved for {patience} epochs. Early stopping...")
-            break
-val_scores.size()
+# Calculate average metrics across folds
+avg_accuracy = np.mean(fold_accuracy_list)
+avg_precision = np.mean(fold_precision_list)
+avg_recall = np.mean(fold_recall_list)
+avg_f1 = np.mean(fold_f1_list)
+avg_mrr = np.mean(fold_mrr_list)
+
+print(f"\nAverage Accuracy: {avg_accuracy:.4f}")
+print(f"Average Precision: {avg_precision:.4f}")
+print(f"Average Recall: {avg_recall:.4f}")
+print(f"Average F1 Score: {avg_f1:.4f}")
+print(f"Average MRR: {avg_mrr:.4f}")
+
+# Save the best model
+torch.save(best_model_state, f'/var/scratch/hwg580/{model_name}_best.pt')
+
 # Plot
-epoch_numbers = list(range(1, len(losses) + 1))
+epoch_numbers = list(range(1, len(best_train_losses) + 1))
 
 plt.figure(figsize=(10, 6))
-plt.plot(epoch_numbers, losses, label="Training Loss")
-plt.plot(epoch_numbers, val_losses, label="Validation Loss")
+plt.plot(epoch_numbers, best_train_losses, label="Training Loss")
+plt.plot(epoch_numbers, best_val_losses, label="Validation Loss")
 plt.xlabel("Epochs")
 plt.ylabel("Losses")
 plt.title("Training and Validation Losses Over Epochs")
 plt.legend()
 plt.grid(True)
 plt.show()
+
 plt.figure(figsize=(10, 8))
 
 # Accuracy
 plt.subplot(2, 2, 1)
-plt.plot(accuracy_list, label='Accuracy')
+plt.plot(best_fold_epoch_metrics['accuracy'], label='Accuracy')
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
 plt.legend()
 
 # Precision
 plt.subplot(2, 2, 2)
-plt.plot(precision_list, label='Precision')
+plt.plot(best_fold_epoch_metrics['precision'], label='Precision')
 plt.xlabel('Epoch')
 plt.ylabel('Precision')
 plt.legend()
 
 # Recall
 plt.subplot(2, 2, 3)
-plt.plot(recall_list, label='Recall')
+plt.plot(best_fold_epoch_metrics['recall'], label='Recall')
 plt.xlabel('Epoch')
 plt.ylabel('Recall')
 plt.legend()
 
 # F1 Score
 plt.subplot(2, 2, 4)
-plt.plot(f1_list, label='F1 Score')
+plt.plot(best_fold_epoch_metrics['f1'], label='F1 Score')
 plt.xlabel('Epoch')
 plt.ylabel('F1 Score')
 plt.legend()
 
 plt.tight_layout()
 plt.show()
-
-def calculate_mrr(sorted_indices, true_values):
-    positive_indices = torch.nonzero(true_values).squeeze()
-    if positive_indices.numel() == 0:
-        return 0.0
-
-    # Map positive indices to their ranks in the sorted list
-    ranks = torch.nonzero(sorted_indices.unsqueeze(1) == positive_indices.unsqueeze(0)).float()[:, 0] + 1
-
-    mrr = (1.0 / ranks).mean().item()
-    return mrr
 
 def evaluate_model(predictions, true_values, sorted_indices, mask):
 
