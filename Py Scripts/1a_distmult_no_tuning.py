@@ -214,10 +214,13 @@ def calculate_mrr(sorted_indices, true_values):
     # Find indices of true positive labels
     positive_indices = torch.nonzero(true_values_tensor).squeeze()
 
+    print(f"Are there TRUE LABELS? - {positive_indices.numel()}")
+    print(f"Length of positives in labels - {len(positive_indices)}")
+
     if positive_indices.numel() == 0:
         return 0.0
 
-    # Map indices in sorted_indices to their ranks
+    # Map indices in sorted_indices to their ranks --> RANKING
     rank_map = {}
     for rank, idx in enumerate(sorted_indices, start=1):
         rank_map[idx.item()] = rank
@@ -226,13 +229,14 @@ def calculate_mrr(sorted_indices, true_values):
     for idx in positive_indices:
         rank = rank_map.get(idx.item(), 0)
         if rank != 0:
-            reciprocal_ranks.append(1.0 / rank)
+            reciprocal_ranks.append(1.0 / rank) # 1/20
 
     if len(reciprocal_ranks) == 0:
         return 0.0
 
     # Calculate the mean reciprocal rank
-    mrr = torch.mean(torch.tensor(reciprocal_ranks, dtype=torch.float))
+    mrr = torch.tensor(reciprocal_ranks, dtype=torch.float) / len(positive_indices)
+    print(mrr)
 
     return mrr.item()
 
@@ -626,6 +630,7 @@ def log_experiment(model_name, learning_rate, out_channels, epoch, weight_decay,
         f.write(f"MRR: {mrr}\n")
     
     # Update the general CSV file
+    print("Updating csv file...")
     csv_file = f"/home/hwg580/thesis/AML-fraud-detector/general.csv"
     write_header = not os.path.exists(csv_file)
     with open(csv_file, "a") as f:
@@ -636,7 +641,8 @@ def log_experiment(model_name, learning_rate, out_channels, epoch, weight_decay,
 
 # Inside the training loop, after each epoch:
 # Log the experiment
-log_experiment(model_name=model_name, learning_rate=learning_rate, out_channels=out_channels, epoch=epoch, weight_decay=weight_decay, dropout=dropout, loss=test_loss, accuracy=test_accuracy, precision=test_precision, recall=test_recall, f1=test_f1, mrr=test_mrr)
+print("Logging...")
+log_experiment(model_name=model_name, learning_rate=learning_rate, out_channels=out_channels, epoch=epochs, weight_decay=weight_decay, dropout=dropout, loss=test_loss, accuracy=test_accuracy, precision=test_precision, recall=test_recall, f1=test_f1, mrr=test_mrr)
 
 # PYTORCH.save --> save the tensor for predictions for the graph
 torch.save({'test_labels': test_labels}, f'/home/hwg580/thesis/AML-fraud-detector/Results/{model_name}/labels.pt')

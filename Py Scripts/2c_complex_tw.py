@@ -661,6 +661,7 @@ def log_experiment(model_name, learning_rate, out_channels, epoch, weight_decay,
         f.write(f"MRR: {mrr}\n")
     
     # Update the general CSV file
+    print("Updating csv file...")
     csv_file = f"/home/hwg580/thesis/AML-fraud-detector/general.csv"
     write_header = not os.path.exists(csv_file)
     with open(csv_file, "a") as f:
@@ -671,7 +672,8 @@ def log_experiment(model_name, learning_rate, out_channels, epoch, weight_decay,
 
 # Inside the training loop, after each epoch:
 # Log the experiment
-log_experiment(model_name=model_name, learning_rate=learning_rate, out_channels=out_channels, epoch=epoch, weight_decay=weight_decay, dropout=dropout, loss=test_loss, accuracy=test_accuracy, precision=test_precision, recall=test_recall, f1=test_f1, mrr=test_mrr)
+print("Logging...")
+log_experiment(model_name=model_name, learning_rate=learning_rate, out_channels=out_channels, epoch=epochs, weight_decay=weight_decay, dropout=dropout, loss=test_loss, accuracy=test_accuracy, precision=test_precision, recall=test_recall, f1=test_f1, mrr=test_mrr)
 
 # PYTORCH.save --> save the tensor for predictions for the graph
 torch.save({'test_labels': test_labels}, f'/home/hwg580/thesis/AML-fraud-detector/Results/{model_name}/labels.pt')
