@@ -48,18 +48,6 @@ input_data = saved_data['input_data']
 time_closeness = saved_data['time_closeness']
 adjacency_tensor = saved_data['adjacency_tensor']
 
-# Convert adjacency_matrix to PyTorch sparse tensor
-def scipy_sparse_to_torch_sparse(matrix):
-    coo = matrix.tocoo()
-    values = coo.data
-    indices = np.vstack((coo.row, coo.col))
-    i = torch.LongTensor(indices)
-    v = torch.FloatTensor(values)
-    shape = coo.shape
-    return torch.sparse.FloatTensor(i, v, torch.Size(shape))
-
-adjacency_tensor = scipy_sparse_to_torch_sparse(adjacency_matrix)
-
 print("Splitting data...")
 # Split the nodes into training, validation, and test sets
 num_edges = edges_features.shape[0]

@@ -316,6 +316,10 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
         val_f1 = f1_score(val_labels, val_predictions)
         val_mrr = calculate_mrr(torch.argsort(val_scores, descending=True), val_labels)
 
+        print(f"\nEpoch {epoch}, Training Loss: {loss:.4f}, Validation Loss: {val_loss:.4f}")
+        print(f"Accuracy: {val_accuracy:.4f}, Precision: {val_precision:.4f}, Recall: {val_recall:.4f}, F1 Score: {val_f1:.4f}, MRR: {val_mrr:.4f}")
+
+        print(f"Storing Metrics....")
         # Store metrics for the current epoch
         best_fold_epoch_metrics['accuracy'].append(val_accuracy)
         best_fold_epoch_metrics['precision'].append(val_precision)
@@ -355,7 +359,8 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
             patience_counter += 1
             if patience_counter > patience:
                 break
-
+            
+    print(f"Storing Metrics for fold....")
     # Store metrics for the fold
     fold_accuracy_list.append(best_fold_best_metrics['accuracy'])
     fold_precision_list.append(best_fold_best_metrics['precision'])
@@ -363,6 +368,7 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
     fold_f1_list.append(best_fold_best_metrics['f1'])
     fold_mrr_list.append(best_fold_best_metrics['mrr'])
 
+    
 # Print best model's evaluation metrics
 print("\nBest Model Evaluation Metrics:")
 print(f"Accuracy: {np.mean(fold_accuracy_list):.4f}")

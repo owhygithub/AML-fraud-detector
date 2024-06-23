@@ -266,28 +266,23 @@ best_epoch_metrics = {
 }
 
 for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(input_data.edge_attr.shape[0]))):
-    print(f"\nFold {fold + 1}/{k}")
-
-    # print("Creating mask data...")
     train_fold_mask = torch.zeros(input_data.edge_attr.shape[0], dtype=torch.bool)
     val_fold_mask = torch.zeros(input_data.edge_attr.shape[0], dtype=torch.bool)
 
     train_fold_mask[train_fold_indices] = True
     val_fold_mask[val_fold_indices] = True
-    # print("Mask data created...")
 
     # Initialize model, optimizer, and loss function for each fold
-    # print("Loading Model...")
     model = GNNModel(node_features=input_data.x.size(1), edge_features=input_data.edge_attr.size(1), out_channels=out_channels, dropout=dropout)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     criterion = nn.BCEWithLogitsLoss()
-    # print("Model. optimizer, criterion Loaded...")
 
     train_losses = []
     val_losses = []
     val_accuracies = []
     best_fold_val_loss = float('inf')
     best_fold_train_losses = []
+    best_fold_val_losses = []
     best_fold_epoch_metrics = {
         'accuracy': [],
         'precision': [],
@@ -300,60 +295,44 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
         'sorted_indices': []
     }
     patience_counter = 0
-    # print("Lists created...")
 
     for epoch in range(epochs):
-        # print(f"\tIn Epoch {epoch + 1}...")
         # Adjust learning rate based on annealing schedule
         if epoch % annealing_epochs == 0 and epoch != 0:
             new_learning_rate = learning_rate * math.exp(-annealing_rate * epoch)
             for param_group in optimizer.param_groups:
                 param_group['lr'] = new_learning_rate
 
-        # print(f"Training model...")
         # Training
         model.train()
-        # print(f"Applying Zero Grad...")
         optimizer.zero_grad()
-        # print(f"Getting scores & embeddings...")
         x_embedding, e_embedding, scores = model(input_data.x, input_data.edge_index[:, train_fold_mask], input_data.edge_attr[train_fold_mask])
-        # print(f"Calculating Loss...")
         loss = criterion(scores, labels[train_fold_mask].float())
-        #  print(f"Backpropagation...")
         loss.backward()
-        #print(f"Optimizer...")
         optimizer.step()
 
-        #print(f"Validation evaluation....")
         # Validation
         model.eval()
-        #print(f"Getting validation scores & embeddings....")
         with torch.no_grad():
             val_x_embedding, val_e_embedding, val_scores = model(input_data.x, input_data.edge_index[:, val_fold_mask], input_data.edge_attr[val_fold_mask])
             val_loss = criterion(val_scores, labels[val_fold_mask].float()).item()
 
-        #print(f"Losses....")
         train_losses.append(loss.item())
         val_losses.append(val_loss)
 
-        #print(f"Labels....")
         train_labels = labels[train_fold_mask]
         val_labels = labels[val_fold_mask]
 
-        #print(f"Calculating Metrics....")
         # Calculate metrics
         train_predictions = assign_predictions(scores)
         val_predictions = assign_predictions(val_scores)
 
         sorted_indices = torch.argsort(val_scores, descending=True)
 
-        # print(f"Accuracy, precision, recall, f1...")
         val_accuracy = accuracy_score(val_labels, val_predictions)
         val_precision = precision_score(val_labels, val_predictions)
         val_recall = recall_score(val_labels, val_predictions)
         val_f1 = f1_score(val_labels, val_predictions)
-
-        #print(f"Calculating MRR...")
         val_mrr = calculate_mrr(torch.argsort(val_scores, descending=True), val_labels)
 
         print(f"\nEpoch {epoch}, Training Loss: {loss:.4f}, Validation Loss: {val_loss:.4f}")
@@ -375,46 +354,40 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
         if val_loss < best_fold_val_loss:
             best_fold_val_loss = val_loss
             best_fold_train_losses = train_losses.copy()
-            best_fold_epoch_metrics['accuracy'].append(val_accuracy)
-            best_fold_epoch_metrics['precision'].append(val_precision)
-            best_fold_epoch_metrics['recall'].append(val_recall)
-            best_fold_epoch_metrics['f1'].append(val_f1)
-            best_fold_epoch_metrics['mrr'].append(val_mrr)
-            best_fold_epoch_metrics['val_predictions'].append(val_predictions)
-            best_fold_epoch_metrics['sorted_indices'].append(sorted_indices)
-            
+            best_fold_val_losses = val_losses.copy()
+
+            best_fold_best_metrics = {
+                'accuracy': val_accuracy,
+                'precision': val_precision,
+                'recall': val_recall,
+                'f1': val_f1,
+                'mrr': val_mrr,
+                'val_predictions': val_predictions,
+                'sorted_indices': sorted_indices
+            }
+
             patience_counter = 0
-            
+
             if best_fold_val_loss < best_val_loss:
                 best_val_loss = best_fold_val_loss
                 best_model_state = model.state_dict()
-                best_val_accuracies = val_accuracies.copy()
+                best_train_losses = best_fold_train_losses.copy()
+                best_val_losses = best_fold_val_losses.copy()
+                best_epoch_metrics = best_fold_epoch_metrics.copy()
         else:
             patience_counter += 1
             if patience_counter > patience:
-                print(f"Validation loss hasn't improved for {patience} epochs. Early stopping...")
                 break
-
+            
     print(f"Storing Metrics for fold....")
     # Store metrics for the fold
-    fold_accuracy_list.append(best_fold_epoch_metrics['best_accuracy'])
-    fold_precision_list.append(best_fold_epoch_metrics['best_precision'])
-    fold_recall_list.append(best_fold_epoch_metrics['best_recall'])
-    fold_f1_list.append(best_fold_epoch_metrics['best_f1'])
-    fold_mrr_list.append(best_fold_epoch_metrics['best_mrr'])
+    fold_accuracy_list.append(best_fold_best_metrics['accuracy'])
+    fold_precision_list.append(best_fold_best_metrics['precision'])
+    fold_recall_list.append(best_fold_best_metrics['recall'])
+    fold_f1_list.append(best_fold_best_metrics['f1'])
+    fold_mrr_list.append(best_fold_best_metrics['mrr'])
 
-    print(f"Storing Metrics for best model in fold....")
-    # Store losses for the best model of the fold
-    best_epoch_metrics['accuracy'].append(best_fold_epoch_metrics['accuracy'])
-    best_epoch_metrics['precision'].append(best_fold_epoch_metrics['precision'])
-    best_epoch_metrics['recall'].append(best_fold_epoch_metrics['recall'])
-    best_epoch_metrics['f1'].append(best_fold_epoch_metrics['f1'])
-    best_epoch_metrics['mrr'].append(best_fold_epoch_metrics['mrr'])
-    best_epoch_metrics['train_loss'].append(best_fold_epoch_metrics['train_loss'])
-    best_epoch_metrics['val_loss'].append(best_fold_epoch_metrics['val_loss'])
-
-    print(f"Fold {fold + 1} - Accuracy: {fold_accuracy_list[-1]:.4f}, Precision: {fold_precision_list[-1]:.4f}, Recall: {fold_recall_list[-1]:.4f}, F1 Score: {fold_f1_list[-1]:.4f}")
-
+    
 # Print best model's evaluation metrics
 print("\nBest Model Evaluation Metrics:")
 print(f"Accuracy: {np.mean(fold_accuracy_list):.4f}")
@@ -422,9 +395,6 @@ print(f"Precision: {np.mean(fold_precision_list):.4f}")
 print(f"Recall: {np.mean(fold_recall_list):.4f}")
 print(f"F1 Score: {np.mean(fold_f1_list):.4f}")
 print(f"MRR: {np.mean(fold_mrr_list):.4f}")
-
-val_predictions = best_fold_epoch_metrics['val_predictions']
-sorted_indices = best_fold_epoch_metrics['sorted_indices']
 
 # Calculate average metrics across folds
 avg_accuracy = np.mean(fold_accuracy_list)
@@ -459,28 +429,28 @@ plt.figure(figsize=(10, 8))
 
 # Accuracy
 plt.subplot(2, 2, 1)
-plt.plot(best_fold_epoch_metrics['accuracy'], label='Accuracy')
+plt.plot(best_epoch_metrics['accuracy'], label='Accuracy')
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
 plt.legend()
 
 # Precision
 plt.subplot(2, 2, 2)
-plt.plot(best_fold_epoch_metrics['precision'], label='Precision')
+plt.plot(best_epoch_metrics['precision'], label='Precision')
 plt.xlabel('Epoch')
 plt.ylabel('Precision')
 plt.legend()
 
 # Recall
 plt.subplot(2, 2, 3)
-plt.plot(best_fold_epoch_metrics['recall'], label='Recall')
+plt.plot(best_epoch_metrics['recall'], label='Recall')
 plt.xlabel('Epoch')
 plt.ylabel('Recall')
 plt.legend()
 
 # F1 Score
 plt.subplot(2, 2, 4)
-plt.plot(best_fold_epoch_metrics['f1'], label='F1 Score')
+plt.plot(best_epoch_metrics['f1'], label='F1 Score')
 plt.xlabel('Epoch')
 plt.ylabel('F1 Score')
 plt.legend()
