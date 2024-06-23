@@ -215,25 +215,24 @@ def calculate_mrr(sorted_indices, true_values):
     if positive_indices.numel() == 0:
         return 0.0
 
-    # Create a tensor to store ranks
-    ranks = torch.zeros_like(positive_indices, dtype=torch.float)
-    
-    # Create a dictionary to store the index of each element in the sorted_indices tensor
-    index_map = {val.item(): idx for idx, val in enumerate(sorted_indices)}
+    # Map indices in sorted_indices to their ranks
+    rank_map = {}
+    for rank, idx in enumerate(sorted_indices, start=1):
+        rank_map[idx.item()] = rank
 
-    # Iterate through each true positive label
-    for i, idx in enumerate(positive_indices):
-        # Find the rank of the true positive label in sorted indices
-        rank = index_map.get(idx.item(), -1) + 1
-        if rank == 0:
-            continue
-        ranks[i] = rank
+    reciprocal_ranks = []
+    for idx in positive_indices:
+        rank = rank_map.get(idx.item(), 0)
+        if rank != 0:
+            reciprocal_ranks.append(1.0 / rank)
 
-    # Calculate reciprocal ranks and then mean reciprocal rank
-    reciprocal_ranks = 1.0 / ranks
-    mrr = reciprocal_ranks.mean().item()
+    if len(reciprocal_ranks) == 0:
+        return 0.0
 
-    return mrr
+    # Calculate the mean reciprocal rank
+    mrr = torch.mean(torch.tensor(reciprocal_ranks, dtype=torch.float))
+
+    return mrr.item()
 
 # Assuming the data loading and model definition parts remain unchanged
 
