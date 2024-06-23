@@ -117,11 +117,11 @@ class GNNModel(nn.Module):
         super(GNNModel, self).__init__()
         self.conv1 = GNNLayer(node_features, edge_features, out_channels, dropout)
     
-    def forward(self, x, edge_index, edge_attr):
+    def forward(self, x, edge_index, edge_attr, time_closeness_tensor):
         axw1, ew1 = self.conv1(x, edge_index, edge_attr)
 
         head_indices, tail_indices = self.mapping(ew1, edge_index)
-        scores = self.complex(axw1, ew1, head_indices, tail_indices, time_closeness) # add the timestamp
+        scores = self.complex(axw1, ew1, head_indices, tail_indices, time_closeness_tensor) # add the timestamp
         
         return axw1, ew1, scores # returning x and e embeddings
 
