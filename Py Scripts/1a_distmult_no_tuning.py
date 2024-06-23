@@ -503,14 +503,12 @@ plt.legend()
 plt.tight_layout()
 plt.show()
 
-def evaluate_model(predictions, true_values, sorted_indices, mask):
-
+def evaluate_model(predictions, true_values, sorted_indices, mask, model_name):
+    # Define the results folder path
+    results_folder = f'/home/hwg580/thesis/AML-fraud-detector/Results/{model_name}'
+    os.makedirs(results_folder, exist_ok=True)
+    
     true_values = true_values[mask].float()
-
-    # print(true_values)
-    # print(predictions)
-    # print(true_values.size())
-    # print(predictions.size())
 
     # Convert tensors to numpy arrays
     predictions = predictions.cpu().numpy()
@@ -544,6 +542,9 @@ def evaluate_model(predictions, true_values, sorted_indices, mask):
         "ROC Curve": (fpr, tpr, roc_auc)
     }
 
+    # Get current datetime for filenames
+    current_datetime = datetime.now().strftime("%Y%m%d_%H%M%S")
+
     # Plot ROC curve
     plt.figure(figsize=(10, 6))
     plt.plot(fpr, tpr, color='blue', lw=2, label=f'ROC curve (AUC = {roc_auc:.2f})')
@@ -555,7 +556,9 @@ def evaluate_model(predictions, true_values, sorted_indices, mask):
     plt.title('Receiver Operating Characteristic (ROC) Curve')
     plt.legend(loc="lower right")
     plt.grid(True)
-    plt.show()
+    roc_curve_path = os.path.join(results_folder, f'roc_curve_{current_datetime}.png')
+    plt.savefig(roc_curve_path)
+    plt.close()
     
     # Plot confusion matrix
     plt.figure(figsize=(8, 6))
@@ -563,11 +566,13 @@ def evaluate_model(predictions, true_values, sorted_indices, mask):
     plt.xlabel('Predicted Label')
     plt.ylabel('True Label')
     plt.title('Confusion Matrix')
-    plt.show()
+    confusion_matrix_path = os.path.join(results_folder, f'confusion_matrix_{current_datetime}.png')
+    plt.savefig(confusion_matrix_path)
+    plt.close()
 
     return metrics_dict
 
-metrics_dict = evaluate_model(val_predictions, labels, sorted_indices, val_mask)
+metrics_dict = evaluate_model(val_predictions, labels, sorted_indices, val_mask, model_name)
 
 # Print Evaluation Metrics
 print("Evaluation Metrics:")
@@ -588,6 +593,10 @@ for metric_name, metric_value in metrics_dict.items():
     else:
         print(f"{metric_name}: {metric_value}")
     print()
+
+# Load the best model for testing
+best_model_state = torch.load(f'/var/scratch/hwg580/{model_name}_best.pt')
+model.load_state_dict(best_model_state)
 
 print("Testing...")
 # TESTING
@@ -611,7 +620,7 @@ test_mrr = calculate_mrr(sorted_indices, test_labels)
 print(f"Accuracy: {test_accuracy:.4f}, Precision: {test_precision:.4f}, Recall: {test_recall:.4f}, F1 Score: {test_f1:.4f}")
 print(f"This is the MRR testing data: {test_mrr}")
 
-metrics_dict = evaluate_model(test_predictions, labels, sorted_indices, test_mask)
+metrics_dict = evaluate_model(test_predictions, labels, sorted_indices, test_mask, model_name)
 
 # Print Evaluation Metrics
 print("Evaluation Metrics:")
@@ -634,6 +643,7 @@ for metric_name, metric_value in metrics_dict.items():
     print()
 
 # LOGGING
+# Function to log the experiment
 def log_experiment(model_name, learning_rate, out_channels, epoch, weight_decay, dropout, loss, accuracy, precision, recall, f1, mrr):
     # Create a folder for the experiment if it doesn't exist
     folder_name = f"/home/hwg580/thesis/AML-fraud-detector/Results/{model_name}"
@@ -674,8 +684,8 @@ def log_experiment(model_name, learning_rate, out_channels, epoch, weight_decay,
 log_experiment(model_name=model_name, learning_rate=learning_rate, out_channels=out_channels, epoch=epoch, weight_decay=weight_decay, dropout=dropout, loss=test_loss, accuracy=test_accuracy, precision=test_precision, recall=test_recall, f1=test_f1, mrr=test_mrr)
 
 # PYTORCH.save --> save the tensor for predictions for the graph
-torch.save({'test_labels': test_labels}, f'Results/{model_name}/labels.pt')
-torch.save({'predictions': test_predictions}, f'Results/{model_name}/predictions_{model_name}_{random.randint(1, 100)}.pt')
+torch.save({'test_labels': test_labels}, f'/home/hwg580/thesis/AML-fraud-detector/Results/{model_name}/labels.pt')
+torch.save({'predictions': test_predictions}, f'/home/hwg580/thesis/AML-fraud-detector/Results/{model_name}/predictions_{model_name}_{random.randint(1, 100)}.pt')
 
 # # RDF
 # import gzip
