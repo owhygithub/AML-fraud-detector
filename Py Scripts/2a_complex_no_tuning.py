@@ -3,21 +3,19 @@
 model_name = "ComplEx"
 
 import numpy as np
-import pickle
-import random
 import os
-import optuna
 import csv
 import math
+import torch
+import optuna
+import pickle
+import random
 import datetime
+import torch.nn as nn
 import seaborn as sns
-from sklearn.model_selection import KFold
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-import torch
-import torch.nn as nn
 import matplotlib.pyplot as plt
-import torch
-import torch.nn as nn
+from sklearn.model_selection import KFold
+from torch_geometric.loader import DataLoader
 from torch_geometric.nn import MessagePassing
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, classification_report, roc_curve, auc
@@ -152,177 +150,44 @@ class GNNModel(nn.Module):
         return edge_index[0], edge_index[1]
 
 
-# HYPERPARAMATER TUNING
 def assign_predictions(val_scores, threshold=0.5):
     # Assign labels based on a threshold
     predicted_labels = (val_scores >= threshold).float()
     return predicted_labels
 
-# Define the objective function for Optuna
-def objective(trial):
-    # Suggest hyperparameters
-    epochs = trial.suggest_categorical('epochs', [50, 100])  # Reduced epochs
-    lr = trial.suggest_categorical('lr', [0.001, 0.0001])
-    out_channels = trial.suggest_categorical('out_channels', [10, 15])
-    weight_decay = trial.suggest_categorical('weight_decay', [0.0005, 0.00005])
-    dropout = trial.suggest_categorical('dropout', [0.1, 0.5])
-    annealing_rate = trial.suggest_categorical('annealing_rate', [0.01, 0.001])
-    annealing_epochs = trial.suggest_categorical('annealing_epochs', [10, 20])
+# # Now, you can use the best hyperparameters to train your final model
+# best_epochs = best_params['epochs']
+# best_lr = best_params['lr']
+# best_out_channels = best_params['out_channels']
+# best_weight_decay = best_params['weight_decay']
+# best_dropout = best_params['dropout']
+# best_annealing_rate = best_params['annealing_rate']
+# annealing_epochs = best_params['annealing_epochs']
 
-    # Initialize k-fold
-    k = 5
-    kf = KFold(n_splits=k, shuffle=True, random_state=42)
-
-    # Initialize metrics storage
-    all_losses = []
-    all_val_losses = []
-    all_accuracies = []
-    all_precisions = []
-    all_recalls = []
-    all_f1s = []
-
-    # Training with k-fold cross-validation
-    for fold, (train_indices, val_indices) in enumerate(kf.split(range(input_data.edge_attr.shape[0]))):
-        patience_counter = 0
-        print(f"Fold {fold + 1}/{k}")
-
-        # Create masks
-        train_mask = torch.tensor([i in train_indices for i in range(input_data.edge_attr.shape[0])], dtype=torch.bool)
-        val_mask = torch.tensor([i in val_indices for i in range(input_data.edge_attr.shape[0])], dtype=torch.bool)
-
-        # Initialize model, optimizer, and loss function for each fold
-        model = GNNModel(node_features=input_data.x.size(1), edge_features=input_data.edge_attr.size(1), out_channels=out_channels, dropout=dropout)
-        optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
-        criterion = nn.BCEWithLogitsLoss()
-
-        losses = []
-        val_losses = []
-        accuracy_list = []
-        precision_list = []
-        recall_list = []
-        f1_list = []
-
-        best_val_loss = float('inf')
-        patience = 2  # Stricter patience
-
-        for epoch in range(epochs):
-            # Adjust learning rate based on annealing schedule
-            if epoch % annealing_epochs == 0 and epoch != 0:
-                new_learning_rate = lr * math.exp(-annealing_rate * epoch)
-                for param_group in optimizer.param_groups:
-                    param_group['lr'] = new_learning_rate
-
-            # Training
-            model.train()
-            optimizer.zero_grad()
-            x_embedding, e_embedding, scores = model(input_data.x, input_data.edge_index[:, train_mask], input_data.edge_attr[train_mask])
-            loss = criterion(scores, labels[train_mask].float())
-            loss.backward()
-            optimizer.step()
-
-            # Validation
-            model.eval()
-            with torch.no_grad():
-                _, _, val_scores = model(input_data.x, input_data.edge_index[:, val_mask], input_data.edge_attr[val_mask])
-                val_loss = criterion(val_scores, labels[val_mask].float()).item()
-
-            losses.append(loss.item())
-            val_losses.append(val_loss)
-
-            val_labels = labels[val_mask]
-            val_predictions = (val_scores >= 0.5).float()
-
-            val_accuracy = accuracy_score(val_labels.cpu(), val_predictions.cpu())
-            val_precision = precision_score(val_labels.cpu(), val_predictions.cpu())
-            val_recall = recall_score(val_labels.cpu(), val_predictions.cpu())
-            val_f1 = f1_score(val_labels.cpu(), val_predictions.cpu())
-
-            accuracy_list.append(val_accuracy)
-            precision_list.append(val_precision)
-            recall_list.append(val_recall)
-            f1_list.append(val_f1)
-
-            print(f"Epoch {epoch}, Training Loss: {loss:.4f}, Validation Loss: {val_loss:.4f}")
-            print(f"Accuracy: {val_accuracy:.4f}, Precision: {val_precision:.4f}, Recall: {val_recall:.4f}, F1 Score: {val_f1:.4f}")
-
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
-                patience_counter = 0
-            else:
-                patience_counter += 1
-                if patience_counter > patience:
-                    print(f"Validation loss hasn't improved for {patience} epochs. Early stopping...")
-                    break
-
-        all_losses.append(losses)
-        all_val_losses.append(val_losses)
-        all_accuracies.append(accuracy_list)
-        all_precisions.append(precision_list)
-        all_recalls.append(recall_list)
-        all_f1s.append(f1_list)
-
-        print(f"Finished fold {fold + 1}")
-
-    # Average metrics across all folds
-    mean_val_loss = sum([sum(loss) / len(loss) for loss in all_val_losses]) / k
-    mean_accuracy = sum([sum(acc) / len(acc) for acc in all_accuracies]) / k
-    mean_precision = sum([sum(prec) / len(prec) for prec in all_precisions]) / k
-    mean_recall = sum([sum(rec) / len(rec) for rec in all_recalls]) / k
-    mean_f1 = sum([sum(f1) / len(f1) for f1 in all_f1s]) / k
-
-    print(f"Mean Validation Loss: {mean_val_loss:.4f}, Mean Accuracy: {mean_accuracy:.4f}, Mean Precision: {mean_precision:.4f}, Mean Recall: {mean_recall:.4f}, Mean F1 Score: {mean_f1:.4f}")
-
-    return mean_recall
-
-print("Hyperparameter Tuning in Progress...")
-# Run Optuna optimization
-study = optuna.create_study(direction='maximize')
-study.optimize(objective, n_trials=32)  # Number of trials can be adjusted
-
-# Print best trial
-print("Best trial:")
-trial = study.best_trial
-
-print("  Recall: {}".format(trial.value))
-print("  Best hyperparameters: {}".format(trial.params))
-
-# Best hyperparameters
-best_params = trial.params
-
-# Now, you can use the best hyperparameters to train your final model
-best_epochs = best_params['epochs']
-best_lr = best_params['lr']
-best_out_channels = best_params['out_channels']
-best_weight_decay = best_params['weight_decay']
-best_dropout = best_params['dropout']
-best_annealing_rate = best_params['annealing_rate']
-annealing_epochs = best_params['annealing_epochs']
-
-# SAVE hyperparams for ComplEx
-print("Saving Hyperparameters...")
-with open("/var/scratch/hwg580/complex_hyperparams.pickle", "wb") as f:
-    pickle.dump({
-        'best_epochs': best_epochs,
-        'best_lr': best_lr,
-        'best_out_channels': best_out_channels,
-        'best_weight_decay': best_weight_decay,
-        'best_dropout': best_dropout,
-        'best_annealing_rate': best_annealing_rate,
-        'annealing_epochs': annealing_epochs
-    }, f)
+# # SAVE hyperparams for ComplEx
+# print("Saving Hyperparameters...")
+# with open("/var/scratch/hwg580/complex_hyperparams.pickle", "wb") as f:
+#     pickle.dump({
+#         'best_epochs': best_epochs,
+#         'best_lr': best_lr,
+#         'best_out_channels': best_out_channels,
+#         'best_weight_decay': best_weight_decay,
+#         'best_dropout': best_dropout,
+#         'best_annealing_rate': best_annealing_rate,
+#         'annealing_epochs': annealing_epochs
+#     }, f)
 
 
 # TRAINING
-# Hyperparams
-learning_rate = best_lr
-out_channels = best_out_channels
-weight_decay = best_weight_decay  # L2 regularization factor
-epochs = best_epochs
-dropout = best_dropout # dropout probability
+learning_rate = 0.0001
+out_channels = 15
+weight_decay = 0.00005  # L2 regularization factor
+epochs = 50
+dropout = 0.1 # dropout probability
 
 # Annealing parameters
-annealing_rate = best_annealing_rate  # Rate at which to decrease the learning rate
-annealing_epochs = annealing_epochs  # Number of epochs before decreasing learning rate
+annealing_rate = 0.01  # Rate at which to decrease the learning rate
+annealing_epochs = 20  # Number of epochs before decreasing learning rate
 
 print("Loading Model...")
 model = GNNModel(node_features=input_data.x.size(1), edge_features=input_data.edge_attr.size(1), out_channels=out_channels, dropout=dropout)

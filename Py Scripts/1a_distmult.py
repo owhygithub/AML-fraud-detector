@@ -232,7 +232,7 @@ best_out_channels = best_params['out_channels']
 best_weight_decay = best_params['weight_decay']
 best_dropout = best_params['dropout']
 best_annealing_rate = best_params['annealing_rate']
-annealing_epochs = best_params['annealing_epochs']
+best_annealing_epochs = best_params['annealing_epochs']
 
 # SAVE hyperparams for DistMult
 print("Saving Hyperparameters...")

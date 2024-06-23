@@ -81,39 +81,6 @@ class GNNLayer(MessagePassing):
         self.edge_features = edge_features
         self.out_channels = out_channels
         self.dropout = nn.Dropout(dropout)
-        
-        # Learnable parameters
-        self.weight_node = nn.Parameter(torch.Tensor(node_features, out_channels))
-        self.weight_edge = nn.Parameter(torch.Tensor(edge_features, out_channels))
-        self.reset_parameters()
-        
-    def reset_parameters(self):
-        nn.init.xavier_uniform_(self.weight_node)
-        nn.init.xavier_uniform_(self.weight_edge)
-        
-    def forward(self, x, edge_index, edge_attr):
-        # AXW0 + EW1
-        global adjacency_tensor
-        self.adjacency_matrix = adjacency_matrix
-        
-        axw = torch.sparse.mm(self.adjacency_matrix, x) @ self.weight_node
-        ew = torch.matmul(edge_attr, self.weight_edge)
-
-        axw = self.dropout(axw)  # Apply dropout to node features
-        ew = self.dropout(ew)    # Apply dropout to edge features
-
-        return axw, ew
-
-    def update(self, aggr_out):
-        return aggr_out
-
-class GNNLayer(MessagePassing):
-    def __init__(self, node_features, edge_features, out_channels, dropout):
-        super(GNNLayer, self).__init__(aggr='add')
-        self.node_features = node_features
-        self.edge_features = edge_features
-        self.out_channels = out_channels
-        self.dropout = nn.Dropout(dropout)
         # Learnable parameters
         self.weight_node = nn.Parameter(torch.Tensor(node_features, out_channels))
         self.weight_edge = nn.Parameter(torch.Tensor(edge_features, out_channels))
@@ -168,32 +135,32 @@ class GNNModel(nn.Module):
         return edge_index[0], edge_index[1]
 
 # Get Hyperparams
-file_path = "/var/scratch/hwg580/distmult_hyperparams.pickle"
+# file_path = "/var/scratch/hwg580/distmult_hyperparams.pickle"
 
-# Load the data from the file
-with open(file_path, "rb") as f:
-    saved_data = pickle.load(f)
+# # Load the data from the file
+# with open(file_path, "rb") as f:
+#     saved_data = pickle.load(f)
 
-print("Hyperparameter Loading...")
-# Now, you can access the saved data using the keys used during saving
-best_epochs = saved_data['best_epochs']
-best_lr = saved_data['best_lr']
-best_out_channels = saved_data['best_out_channels']
-best_weight_decay = saved_data['best_weight_decay']
-best_dropout = saved_data['best_dropout']
-best_annealing_rate = saved_data['best_annealing_rate']
-annealing_epochs = saved_data['annealing_epochs']
+# print("Hyperparameter Loading...")
+# # Now, you can access the saved data using the keys used during saving
+# best_epochs = saved_data['best_epochs']
+# best_lr = saved_data['best_lr']
+# best_out_channels = saved_data['best_out_channels']
+# best_weight_decay = saved_data['best_weight_decay']
+# best_dropout = saved_data['best_dropout']
+# best_annealing_rate = saved_data['best_annealing_rate']
+# annealing_epochs = saved_data['annealing_epochs']
 
 # Hyperparams --- adjust to model best hyperparams
-learning_rate = best_lr
-out_channels = best_out_channels
-weight_decay = best_weight_decay  # L2 regularization factor
-epochs = best_epochs
-dropout = best_dropout # dropout probability
+learning_rate = 0.0001
+out_channels = 10
+weight_decay = 0.0005  # L2 regularization factor
+epochs = 50
+dropout = 0.1 # dropout probability
 
 # Annealing parameters
-annealing_rate = best_annealing_rate  # Rate at which to decrease the learning rate
-annealing_epochs = annealing_epochs  # Number of epochs before decreasing learning rate
+annealing_rate = 0.01  # Rate at which to decrease the learning rate
+annealing_epochs = 20  # Number of epochs before decreasing learning rate
 
 print("Loading Model...")
 model = GNNModel(node_features=input_data.x.size(1), edge_features=input_data.edge_attr.size(1), out_channels=out_channels, dropout=dropout)

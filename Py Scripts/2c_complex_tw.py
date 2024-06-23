@@ -3,19 +3,19 @@
 model_name = "ComplEx-T+W"
 
 import numpy as np
-import random
-import pickle
 import os
-import math
 import csv
+import math
+import torch
+import optuna
+import pickle
+import random
 import datetime
+import torch.nn as nn
 import seaborn as sns
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-import torch
-import torch.nn as nn
 import matplotlib.pyplot as plt
-import torch
-import torch.nn as nn
+from sklearn.model_selection import KFold
+from torch_geometric.loader import DataLoader
 from torch_geometric.nn import MessagePassing
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, classification_report, roc_curve, auc
@@ -163,33 +163,33 @@ class GNNModel(nn.Module):
         tail_indices = edge_index[1]
         return head_indices, tail_indices
     
-# Get Hyperparams
-file_path = "/var/scratch/hwg580/complex_hyperparams.pickle"
+# # Get Hyperparams
+# file_path = "/var/scratch/hwg580/complex_hyperparams.pickle"
 
-# Load the data from the file
-with open(file_path, "rb") as f:
-    saved_data = pickle.load(f)
+# # Load the data from the file
+# with open(file_path, "rb") as f:
+#     saved_data = pickle.load(f)
 
-print("Hyperparameter Loading...")
-# Now, you can access the saved data using the keys used during saving
-best_epochs = saved_data['best_epochs']
-best_lr = saved_data['best_lr']
-best_out_channels = saved_data['best_out_channels']
-best_weight_decay = saved_data['best_weight_decay']
-best_dropout = saved_data['best_dropout']
-best_annealing_rate = saved_data['best_annealing_rate']
-annealing_epochs = saved_data['annealing_epochs']
+# print("Hyperparameter Loading...")
+# # Now, you can access the saved data using the keys used during saving
+# best_epochs = saved_data['best_epochs']
+# best_lr = saved_data['best_lr']
+# best_out_channels = saved_data['best_out_channels']
+# best_weight_decay = saved_data['best_weight_decay']
+# best_dropout = saved_data['best_dropout']
+# best_annealing_rate = saved_data['best_annealing_rate']
+# annealing_epochs = saved_data['annealing_epochs']
 
-# Hyperparams --- adjust to model best hyperparams
-learning_rate = best_lr
-out_channels = best_out_channels
-weight_decay = best_weight_decay  # L2 regularization factor
-epochs = best_epochs
-dropout = best_dropout # dropout probability
+# TRAINING
+learning_rate = 0.0001
+out_channels = 15
+weight_decay = 0.00005  # L2 regularization factor
+epochs = 50
+dropout = 0.1 # dropout probability
 
 # Annealing parameters
-annealing_rate = best_annealing_rate  # Rate at which to decrease the learning rate
-annealing_epochs = annealing_epochs  # Number of epochs before decreasing learning rate
+annealing_rate = 0.01  # Rate at which to decrease the learning rate
+annealing_epochs = 20  # Number of epochs before decreasing learning rate
 
 print("Loading Model...")
 model = GNNModel(node_features=input_data.x.size(1), edge_features=input_data.edge_attr.size(1), out_channels=out_channels, dropout=dropout)

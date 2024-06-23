@@ -371,20 +371,20 @@ best_epoch_metrics = {
 for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(input_data.edge_attr.shape[0]))):
     print(f"\nFold {fold + 1}/{k}")
 
-    print("Creating mask data...")
+    # print("Creating mask data...")
     train_fold_mask = torch.zeros(input_data.edge_attr.shape[0], dtype=torch.bool)
     val_fold_mask = torch.zeros(input_data.edge_attr.shape[0], dtype=torch.bool)
 
     train_fold_mask[train_fold_indices] = True
     val_fold_mask[val_fold_indices] = True
-    print("Mask data created...")
+    # print("Mask data created...")
 
     # Initialize model, optimizer, and loss function for each fold
-    print("Loading Model...")
+    # print("Loading Model...")
     model = GNNModel(node_features=input_data.x.size(1), edge_features=input_data.edge_attr.size(1), out_channels=out_channels, dropout=dropout)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     criterion = nn.BCEWithLogitsLoss()
-    print("Model. optimizer, criterion Loaded...")
+    # print("Model. optimizer, criterion Loaded...")
 
     train_losses = []
     val_losses = []
@@ -403,60 +403,60 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
         'sorted_indices': []
     }
     patience_counter = 0
-    print("Lists created...")
+    # print("Lists created...")
 
     for epoch in range(epochs):
-        print(f"\tIn Epoch {epoch + 1}...")
+        # print(f"\tIn Epoch {epoch + 1}...")
         # Adjust learning rate based on annealing schedule
         if epoch % annealing_epochs == 0 and epoch != 0:
             new_learning_rate = learning_rate * math.exp(-annealing_rate * epoch)
             for param_group in optimizer.param_groups:
                 param_group['lr'] = new_learning_rate
 
-        print(f"Training model...")
+        # print(f"Training model...")
         # Training
         model.train()
-        print(f"Applying Zero Grad...")
+        # print(f"Applying Zero Grad...")
         optimizer.zero_grad()
-        print(f"Getting scores & embeddings...")
+        # print(f"Getting scores & embeddings...")
         x_embedding, e_embedding, scores = model(input_data.x, input_data.edge_index[:, train_fold_mask], input_data.edge_attr[train_fold_mask])
-        print(f"Calculating Loss...")
+        # print(f"Calculating Loss...")
         loss = criterion(scores, labels[train_fold_mask].float())
-        print(f"Backpropagation...")
+        # print(f"Backpropagation...")
         loss.backward()
-        print(f"Optimizer...")
+        # print(f"Optimizer...")
         optimizer.step()
 
-        print(f"Validation evaluation....")
+        # print(f"Validation evaluation....")
         # Validation
         model.eval()
-        print(f"Getting validation scores & embeddings....")
+        # print(f"Getting validation scores & embeddings....")
         with torch.no_grad():
             val_x_embedding, val_e_embedding, val_scores = model(input_data.x, input_data.edge_index[:, val_fold_mask], input_data.edge_attr[val_fold_mask])
             val_loss = criterion(val_scores, labels[val_fold_mask].float()).item()
 
-        print(f"Losses....")
+        # print(f"Losses....")
         train_losses.append(loss.item())
         val_losses.append(val_loss)
 
-        print(f"Labels....")
+        # print(f"Labels....")
         train_labels = labels[train_fold_mask]
         val_labels = labels[val_fold_mask]
 
-        print(f"Calculating Metrics....")
+        # print(f"Calculating Metrics....")
         # Calculate metrics
         train_predictions = assign_predictions(scores)
         val_predictions = assign_predictions(val_scores)
 
         sorted_indices = torch.argsort(val_scores, descending=True)
 
-        print(f"Accuracy, precision, recall, f1...")
+        # print(f"Accuracy, precision, recall, f1...")
         val_accuracy = accuracy_score(val_labels, val_predictions)
         val_precision = precision_score(val_labels, val_predictions)
         val_recall = recall_score(val_labels, val_predictions)
         val_f1 = f1_score(val_labels, val_predictions)
 
-        print(f"Calculating MRR...")
+        # print(f"Calculating MRR...")
         val_mrr = calculate_mrr(torch.argsort(val_scores, descending=True), val_labels)
 
         print(f"\nEpoch {epoch}, Training Loss: {loss:.4f}, Validation Loss: {val_loss:.4f}")
