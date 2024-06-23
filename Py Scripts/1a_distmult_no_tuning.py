@@ -209,8 +209,9 @@ def assign_top_n_predictions(val_scores, val_labels):
 
     return predicted_labels, sorted_indices
 
+
 def calculate_mrr(sorted_indices, true_values):
-    true_values_tensor = torch.tensor(true_values, dtype=torch.float32)  # Convert NumPy array to PyTorch tensor
+    true_values_tensor = torch.tensor(true_values, dtype=torch.float32).clone().detach()
 
     # Find indices of true positive labels
     positive_indices = torch.nonzero(true_values_tensor).squeeze()
@@ -236,6 +237,7 @@ def calculate_mrr(sorted_indices, true_values):
     mrr = torch.mean(torch.tensor(reciprocal_ranks, dtype=torch.float32))
 
     return mrr.item()  # Return MRR as a Python float
+
 
 # Assuming the data loading and model definition parts remain unchanged
 
