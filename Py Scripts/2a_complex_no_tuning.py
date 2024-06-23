@@ -26,6 +26,17 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 
 import pickle
 
+def calculate_mrr(sorted_indices, true_values):
+    positive_indices = torch.nonzero(true_values).squeeze()
+    if positive_indices.numel() == 0:
+        return 0.0
+
+    # Map positive indices to their ranks in the sorted list
+    ranks = torch.nonzero(sorted_indices.unsqueeze(1) == positive_indices.unsqueeze(0)).float()[:, 0] + 1
+
+    mrr = (1.0 / ranks).mean().item()
+    return mrr
+
 print("Started the program...")
 # Specify the file path where the data is saved
 file_path = "/var/scratch/hwg580/graph_Balanced_HI-Large_Trans.pickle"
@@ -609,16 +620,6 @@ plt.tight_layout()
 plt.show()
 
 
-def calculate_mrr(sorted_indices, true_values):
-    positive_indices = torch.nonzero(true_values).squeeze()
-    if positive_indices.numel() == 0:
-        return 0.0
-
-    # Map positive indices to their ranks in the sorted list
-    ranks = torch.nonzero(sorted_indices.unsqueeze(1) == positive_indices.unsqueeze(0)).float()[:, 0] + 1
-
-    mrr = (1.0 / ranks).mean().item()
-    return mrr
 def evaluate_model(predictions, true_values, sorted_indices, mask):
 
     true_values = true_values[mask].float()
@@ -676,7 +677,8 @@ def evaluate_model(predictions, true_values, sorted_indices, mask):
     plt.show()
 
     return metrics_dict
-metrics_dict = evaluate_model(predictions, labels, sorted_indices, val_mask)
+
+metrics_dict = evaluate_model(val_predictions, labels, sorted_indices, val_mask)
 
 # Print Evaluation Metrics
 print("Evaluation Metrics:")

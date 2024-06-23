@@ -675,7 +675,7 @@ def evaluate_model(predictions, true_values, sorted_indices, mask):
     plt.show()
 
     return metrics_dict
-metrics_dict = evaluate_model(predictions, labels, sorted_indices, val_mask)
+metrics_dict = evaluate_model(val_predictions, labels, sorted_indices, val_mask)
 
 # Print Evaluation Metrics
 print("Evaluation Metrics:")
