@@ -134,6 +134,11 @@ class GNNModel(nn.Module):
         heads = axw[head_indices]
         tails = axw[tail_indices]
 
+        print(time_closeness_tensor.size())
+        print(heads.size())
+        print(ew.size())
+        print(tails.size())
+
         # Calculate element-wise product of head, tail, and edge embeddings
         # element_wise_product = head_embeddings * ew * tail_embeddings
 
