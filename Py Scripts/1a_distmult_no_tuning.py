@@ -10,7 +10,7 @@ import torch
 import optuna
 import pickle
 import random
-import datetime
+from datetime import datetime
 import torch.nn as nn
 import seaborn as sns
 import matplotlib.pyplot as plt

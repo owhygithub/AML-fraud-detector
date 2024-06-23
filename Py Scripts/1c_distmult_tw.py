@@ -8,9 +8,9 @@ import csv
 import math
 import torch
 import optuna
+from datetime import datetime
 import pickle
 import random
-import datetime
 import torch.nn as nn
 import seaborn as sns
 import matplotlib.pyplot as plt
