@@ -29,12 +29,12 @@ warnings.filterwarnings("ignore", category=UserWarning, message="To copy constru
 
 def calculate_mrr(sorted_indices, true_values):
     # Suppress the specific UserWarning
-    warnings.filterwarnings("ignore", category=UserWarning, message="To copy construct from a tensor")
+    # warnings.filterwarnings("ignore", category=UserWarning, message="To copy construct from a tensor")
     
     true_values_tensor = torch.tensor(true_values, dtype=torch.float32).detach().requires_grad_(True)
 
     # Reset the warning filter to default after tensor creation
-    warnings.resetwarnings()
+    # warnings.resetwarnings()
 
     # Find indices of true positive labels
     positive_indices = torch.nonzero(true_values_tensor).squeeze()
