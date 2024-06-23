@@ -14,11 +14,14 @@ import datetime
 import torch.nn as nn
 import seaborn as sns
 import matplotlib.pyplot as plt
-from sklearn.model_selection import KFold, train_test_split
+from sklearn.model_selection import KFold
+from torch_geometric.loader import DataLoader
 from torch_geometric.nn import MessagePassing
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, classification_report, roc_curve, auc
 
 # LOADING GRAPH from Jupyter Notebook 
+
 import pickle
 
 print("Started the program...")
@@ -45,25 +48,34 @@ input_data = saved_data['input_data']
 time_closeness = saved_data['time_closeness']
 adjacency_tensor = saved_data['adjacency_tensor']
 
+
 print("Splitting data...")
 # Split the nodes into training, validation, and test sets
 num_edges = edges_features.shape[0]
-indices = torch.arange(num_edges)
-
-# Split indices into train, validation, and test sets
+indices = list(range(num_edges))
 train_indices, test_val_indices = train_test_split(indices, test_size=0.4, stratify=labels)
 val_indices, test_indices = train_test_split(test_val_indices, test_size=0.5, stratify=labels[test_val_indices])
 
-# Create masks
+print("Creating mask data...")
+# Convert indices to a tensor
+indices = torch.arange(num_edges)
+
+# Create masks efficiently using torch.zeros_like and indexing
 train_mask = torch.zeros_like(indices, dtype=torch.bool)
 val_mask = torch.zeros_like(indices, dtype=torch.bool)
 test_mask = torch.zeros_like(indices, dtype=torch.bool)
 
+# Set True at indices present in train_indices, val_indices, test_indices
 train_mask[train_indices] = True
 val_mask[val_indices] = True
 test_mask[test_indices] = True
-
 print("Mask data created...")
+
+# Convert time_closeness to a tensor
+time_closeness_tensor = torch.tensor(time_closeness, dtype=torch.float32)
+train_time_closeness = time_closeness_tensor[train_mask]
+val_time_closeness = time_closeness_tensor[val_mask]
+test_time_closeness = time_closeness_tensor[test_mask]
 
 # Define your GNNLayer class
 class GNNLayer(MessagePassing):
@@ -84,6 +96,7 @@ class GNNLayer(MessagePassing):
         nn.init.xavier_uniform_(self.weight_edge)
         
     def forward(self, x, edge_index, edge_attr):
+        # AXW0 + EW1
         global adjacency_tensor
         self.adjacency_matrix = adjacency_tensor
         
@@ -104,40 +117,32 @@ class GNNModel(nn.Module):
         super(GNNModel, self).__init__()
         self.conv1 = GNNLayer(node_features, edge_features, out_channels, dropout)
     
-    def forward(self, x, edge_index, edge_attr, train_mask=None, val_mask=None, test_mask=None):
+    def forward(self, x, edge_index, edge_attr):
         axw1, ew1 = self.conv1(x, edge_index, edge_attr)
 
         head_indices, tail_indices = self.mapping(ew1, edge_index)
-
-        # Subset time_closeness based on mask
-        if train_mask is not None:
-            train_time_closeness = time_closeness[train_mask]
-        else:
-            train_time_closeness = None
+        scores = self.complex(axw1, ew1, head_indices, tail_indices, time_closeness) # add the timestamp
         
-        if val_mask is not None:
-            val_time_closeness = time_closeness[val_mask]
-        else:
-            val_time_closeness = None
-        
-        if test_mask is not None:
-            test_time_closeness = time_closeness[test_mask]
-        else:
-            test_time_closeness = None
+        return axw1, ew1, scores # returning x and e embeddings
 
-        scores_train = self.complex(axw1, ew1, head_indices, tail_indices, train_time_closeness) if train_mask is not None else None
-        scores_val = self.complex(axw1, ew1, head_indices, tail_indices, val_time_closeness) if val_mask is not None else None
-        scores_test = self.complex(axw1, ew1, head_indices, tail_indices, test_time_closeness) if test_mask is not None else None
-        
-        return axw1, ew1, scores_train, scores_val, scores_test
-
+    def update_edge_attr(self, edge_attr, new_channels):
+        num_edge_features = edge_attr.size(1)
+        if new_channels > num_edge_features:
+            updated_edge_attr = torch.cat((edge_attr, torch.zeros((edge_attr.size(0), new_channels - num_edge_features), device=edge_attr.device)), dim=1)
+        else:
+            updated_edge_attr = edge_attr[:, :new_channels]
+        return updated_edge_attr
+    
     def complex(self, axw, ew, head_indices, tail_indices, time_closeness):
         # Convert time_closeness to a tensor (assuming it's already a list)
-        time_closeness_tensor = torch.tensor(time_closeness, dtype=torch.float32, device=axw.device)
+        # time_closeness_tensor = torch.tensor(time_closeness, dtype=torch.float32, device=axw.device)
 
         # Gather node embeddings and edge features for head and tail nodes
         heads = axw[head_indices]
         tails = axw[tail_indices]
+
+        # Calculate element-wise product of head, tail, and edge embeddings
+        # element_wise_product = head_embeddings * ew * tail_embeddings
 
         # Convert real tensors to complex tensors
         heads = torch.complex(heads, torch.zeros_like(heads))
@@ -145,6 +150,7 @@ class GNNModel(nn.Module):
         tails = torch.complex(tails, torch.zeros_like(tails))
 
         raw_scores = torch.real(torch.sum(heads * ew * torch.conj(tails), dim=-1)) * time_closeness_tensor
+        # raw_scores = torch.sum(element_wise_product, dim=-1) * time_closeness_tensor
 
         # Apply sigmoid activation
         normalized_scores = torch.sigmoid(raw_scores)
@@ -155,22 +161,6 @@ class GNNModel(nn.Module):
         head_indices = edge_index[0]
         tail_indices = edge_index[1]
         return head_indices, tail_indices
-    
-# TRAINING
-learning_rate = 0.0001
-out_channels = 15
-weight_decay = 0.00005  # L2 regularization factor
-epochs = 50
-dropout = 0.1 # dropout probability
-
-# Annealing parameters
-annealing_rate = 0.01  # Rate at which to decrease the learning rate
-annealing_epochs = 20  # Number of epochs before decreasing learning rate
-
-print("Loading Model...")
-model = GNNModel(node_features=input_data.x.size(1), edge_features=input_data.edge_attr.size(1), out_channels=out_channels, dropout=dropout)
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
-criterion = nn.BCEWithLogitsLoss()  # Binary classification loss
     
 # # Get Hyperparams
 # file_path = "/var/scratch/hwg580/complex_hyperparams.pickle"
@@ -208,30 +198,29 @@ criterion = nn.BCEWithLogitsLoss()  # Binary classification loss
 def train(data):
     model.train()
     optimizer.zero_grad()
-    x_embedding, e_embedding, scores_train = model(data.x, data.edge_index[:, train_mask], data.edge_attr[train_mask], train_mask=train_mask)
+    x_embedding, e_embedding, scores = model(data.x, data.edge_index[:, train_mask], data.edge_attr[train_mask], train_time_closeness)
 
-    loss = criterion(scores_train, labels[train_mask].float())
+    loss = criterion(scores, labels[train_mask].float())
     loss.backward()
     optimizer.step()
     
-    return loss.item(), x_embedding, e_embedding
+    return loss.item(), x_embedding, e_embedding, scores
 
 # Validation function
 def validate(data):
     model.eval()
     with torch.no_grad():
-        x_embedding, e_embedding, scores_val = model(data.x, data.edge_index[:, val_mask], data.edge_attr[val_mask], val_mask=val_mask)
-        val_loss = criterion(scores_val, labels[val_mask].float()).item()
-    return scores_val, val_loss
+        x_embedding, e_embedding, scores = model(data.x, data.edge_index[:, val_mask], data.edge_attr[val_mask], val_time_closeness)
+        val_loss = criterion(scores, labels[val_mask].float()).item()
+    return x_embedding, e_embedding, scores, val_loss
 
 # Test function
 def test(data):
     model.eval()
     with torch.no_grad():
-        x_embedding, e_embedding, scores = model(data.x, data.edge_index[:, test_mask], data.edge_attr[test_mask], test_mask=test_mask)
+        x_embedding, e_embedding, scores = model(data.x, data.edge_index[:, test_mask], data.edge_attr[test_mask], test_time_closeness)
         test_loss = criterion(scores, labels[test_mask].float()).item()
     return x_embedding, e_embedding, scores, test_loss
-
 def assign_top_n_predictions(val_scores, val_labels):
     # Sort indices of val_scores in descending order
     sorted_indices = torch.argsort(val_scores, descending=True)
@@ -350,7 +339,7 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
         # print(f"Applying Zero Grad...")
         optimizer.zero_grad()
         # print(f"Getting scores & embeddings...")
-        x_embedding, e_embedding, scores = model(input_data.x, input_data.edge_index[:, train_fold_mask], input_data.edge_attr[train_fold_mask], train_mask=train_fold_mask)
+        x_embedding, e_embedding, scores = model(input_data.x, input_data.edge_index[:, train_fold_mask], input_data.edge_attr[train_fold_mask])
         # print(f"Calculating Loss...")
         loss = criterion(scores, labels[train_fold_mask].float())
         # print(f"Backpropagation...")
@@ -363,7 +352,7 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
         model.eval()
         # print(f"Getting validation scores & embeddings....")
         with torch.no_grad():
-            val_x_embedding, val_e_embedding, val_scores = model(input_data.x, input_data.edge_index[:, val_fold_mask], input_data.edge_attr[val_fold_mask], train_mask=val_fold_mask)
+            val_x_embedding, val_e_embedding, val_scores = model(input_data.x, input_data.edge_index[:, val_fold_mask], input_data.edge_attr[val_fold_mask])
             val_loss = criterion(val_scores, labels[val_fold_mask].float()).item()
 
         # print(f"Losses....")
