@@ -132,14 +132,18 @@ class GNNModel(nn.Module):
         time_closeness_tensor = torch.tensor(time_closeness, dtype=torch.float32, device=axw.device)
 
         # Gather node embeddings and edge features for head and tail nodes
-        head_embeddings = axw[head_indices]
-        tail_embeddings = axw[tail_indices]
+        heads = axw[head_indices]
+        tails = axw[tail_indices]
 
         # Calculate element-wise product of head, tail, and edge embeddings
         # element_wise_product = head_embeddings * ew * tail_embeddings
 
-        # Calculate raw scores with time closeness
-        raw_scores = torch.sum(head_embeddings * ew * torch.conj(tail_embeddings), dim=-1) * time_closeness_tensor
+        # Convert real tensors to complex tensors
+        heads = torch.complex(heads, torch.zeros_like(heads))
+        ew = torch.complex(ew, torch.zeros_like(ew))
+        tails = torch.complex(tails, torch.zeros_like(tails))
+
+        raw_scores = torch.real(torch.sum(heads * ew * torch.conj(tails), dim=-1)) * time_closeness_tensor
         # raw_scores = torch.sum(element_wise_product, dim=-1) * time_closeness_tensor
 
         # Apply sigmoid activation
