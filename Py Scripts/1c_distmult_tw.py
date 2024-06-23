@@ -25,6 +25,37 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 
 import pickle
 
+import warnings
+
+def calculate_mrr(sorted_indices, true_values):
+    # Suppress the specific UserWarning
+    warnings.filterwarnings("ignore", category=UserWarning, message="To copy construct from a tensor")
+    
+    true_values_tensor = torch.tensor(true_values, dtype=torch.float32).detach().requires_grad_(True)
+
+    # Reset the warning filter to default after tensor creation
+    warnings.resetwarnings()
+
+    # Find indices of true positive labels
+    positive_indices = torch.nonzero(true_values_tensor).squeeze()
+
+    if positive_indices.numel() == 0:
+        return 0.0
+
+    # Map indices in sorted_indices to their ranks
+    rank_map = {}
+    for rank, idx in enumerate(sorted_indices, start=1):
+        rank_map[idx.item()] = rank
+
+    reciprocal_ranks = []
+    for idx in positive_indices:
+        rank = rank_map.get(idx.item(), 0)
+        if rank != 0:
+            reciprocal_ranks.append(1.0 / rank)
+
+    if len(reciprocal_ranks) == 0:
+        return 0.0
+
 print("Started the program...")
 # Specify the file path where the data is saved
 file_path = "/var/scratch/hwg580/graph_Balanced_HI-Large_Trans.pickle"
@@ -247,51 +278,6 @@ def assign_predictions(val_scores, threshold=0.5):
     # Assign labels based on a threshold
     predicted_labels = (val_scores >= threshold).float()
     return predicted_labels
-
-import warnings
-
-def calculate_mrr(sorted_indices, true_values):
-    # Suppress the specific UserWarning
-    warnings.filterwarnings("ignore", category=UserWarning, message="To copy construct from a tensor")
-    
-    true_values_tensor = torch.tensor(true_values, dtype=torch.float32).detach().requires_grad_(True)
-
-    # Reset the warning filter to default after tensor creation
-    warnings.resetwarnings()
-
-    # Find indices of true positive labels
-    positive_indices = torch.nonzero(true_values_tensor).squeeze()
-
-    if positive_indices.numel() == 0:
-        return 0.0
-
-    # Map indices in sorted_indices to their ranks
-    rank_map = {}
-    for rank, idx in enumerate(sorted_indices, start=1):
-        rank_map[idx.item()] = rank
-
-    reciprocal_ranks = []
-    for idx in positive_indices:
-        rank = rank_map.get(idx.item(), 0)
-        if rank != 0:
-            reciprocal_ranks.append(1.0 / rank)
-
-    if len(reciprocal_ranks) == 0:
-        return 0.0
-
-    # Calculate the mean reciprocal rank
-    mrr = torch.mean(torch.tensor(reciprocal_ranks, dtype=torch.float32))
-
-    return mrr.item()  # Return MRR as a Python float
-
-    # Calculate the mean reciprocal rank
-    # print(f"Reciprocal Ranks: {reciprocal_ranks}")
-    # print(f"SUM OF RECIPROCAL RANKS - {torch.sum(torch.tensor(reciprocal_ranks, dtype=torch.float))}")
-    # print(f"Length of positives in labels - {len(positive_indices)}")
-    mrr = torch.sum(torch.tensor(reciprocal_ranks, dtype=torch.float)) / len(positive_indices)
-    # print(f"MRR - {mrr}")
-
-    return mrr
 
 # Initialize lists for storing fold-wise metrics
 fold_accuracy_list = []
