@@ -77,6 +77,10 @@ train_time_closeness = time_closeness_tensor[train_mask]
 val_time_closeness = time_closeness_tensor[val_mask]
 test_time_closeness = time_closeness_tensor[test_mask]
 
+print(train_time_closeness.size())
+print(val_time_closeness.size())
+print(test_time_closeness.size())
+
 # Define your GNNLayer class
 class GNNLayer(MessagePassing):
     def __init__(self, node_features, edge_features, out_channels, dropout):
