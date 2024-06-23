@@ -31,7 +31,7 @@ df_reduced_1 = df_reduced[df_reduced["Is Laundering"] == 1]
 
 # Calculate the number of instances for the new balanced dataset
 total_instances = min(1000000, len(df_reduced))
-instances_0 = int(0.60 * total_instances)
+instances_0 = int(0.70 * total_instances)
 instances_1 = total_instances - instances_0
 
 print(f"Creating a balanced dataset with {instances_0} non-fraudulent and {instances_1} fraudulent transactions...")
