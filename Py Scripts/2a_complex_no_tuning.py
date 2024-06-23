@@ -25,8 +25,16 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 
 import pickle
 
+import warnings
+
 def calculate_mrr(sorted_indices, true_values):
-    true_values_tensor = torch.tensor(true_values, dtype=torch.float32)  # Convert NumPy array to PyTorch tensor
+    # Suppress the specific UserWarning
+    warnings.filterwarnings("ignore", category=UserWarning, message="To copy construct from a tensor")
+    
+    true_values_tensor = torch.tensor(true_values, dtype=torch.float32).detach().requires_grad_(True)
+
+    # Reset the warning filter to default after tensor creation
+    warnings.resetwarnings()
 
     # Find indices of true positive labels
     positive_indices = torch.nonzero(true_values_tensor).squeeze()
@@ -342,7 +350,7 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
         val_mrr = calculate_mrr(torch.argsort(val_scores, descending=True), val_labels)
 
         print(f"\nEpoch {epoch}, Training Loss: {loss:.4f}, Validation Loss: {val_loss:.4f}")
-        print(f"Accuracy: {val_accuracy:.4f}, Precision: {val_precision:.4f}, Recall: {val_recall:.4f}, F1 Score: {val_f1:.4f}, MRR: {val_mrr:.4f}")
+        print(f"Accuracy: {val_accuracy:.4f}, Precision: {val_precision:.4f}, Recall: {val_recall:.4f}, F1 Score: {val_f1:.4f}, MRR: {val_mrr}")
 
         # Store metrics for this epoch
         fold_accuracy_list.append(val_accuracy)
