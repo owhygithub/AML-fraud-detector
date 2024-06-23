@@ -139,7 +139,7 @@ class GNNModel(nn.Module):
         # element_wise_product = head_embeddings * ew * tail_embeddings
 
         # Calculate raw scores with time closeness
-        raw_scores = torch.real(torch.sum(head_embeddings * ew * torch.conj(tail_embeddings), dim=0)) * time_closeness_tensor
+        raw_scores = torch.sum(head_embeddings * ew * torch.conj(tail_embeddings), dim=-1) * time_closeness_tensor
         # raw_scores = torch.sum(element_wise_product, dim=-1) * time_closeness_tensor
 
         # Apply sigmoid activation
