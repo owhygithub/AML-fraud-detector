@@ -418,6 +418,13 @@ if best_model_state is not None:
 # Plot Training and Validation Losses
 epoch_numbers = list(range(1, len(best_train_losses[0]) + 1))  # Assuming all folds have the same number of epochs
 
+import os
+
+# Define the results folder path
+results_folder = f'/home/hwg580/thesis/AML-fraud-detector/Results/{model_name}'
+os.makedirs(results_folder, exist_ok=True)
+
+# Plot Training and Validation Losses Over Epochs
 plt.figure(figsize=(10, 6))
 for i in range(k):
     plt.plot(epoch_numbers, best_train_losses[i], label=f"Fold {i+1} Training Loss")
@@ -427,9 +434,29 @@ plt.ylabel("Losses")
 plt.title("Training and Validation Losses Over Epochs")
 plt.legend()
 plt.grid(True)
+plt.savefig(os.path.join(results_folder, 'training_validation_losses.png'))
 plt.show()
 
-# Plot Accuracy, Precision, Recall, and F1 Score
+import os
+
+# Define the results folder path
+results_folder = f'/home/hwg580/thesis/AML-fraud-detector/Results/{model_name}/Validation'
+os.makedirs(results_folder, exist_ok=True)
+
+# Plot Training and Validation Losses Over Epochs
+plt.figure(figsize=(10, 6))
+for i in range(k):
+    plt.plot(epoch_numbers, best_train_losses[i], label=f"Fold {i+1} Training Loss")
+    plt.plot(epoch_numbers, best_val_losses[i], label=f"Fold {i+1} Validation Loss")
+plt.xlabel("Epochs")
+plt.ylabel("Losses")
+plt.title("Training and Validation Losses Over Epochs")
+plt.legend()
+plt.grid(True)
+plt.savefig(os.path.join(results_folder, 'training_validation_losses.png'))
+plt.show()
+
+# Plot Accuracy, Precision, Recall, and F1 Score Over Epochs
 plt.figure(figsize=(14, 10))
 
 # Accuracy
@@ -469,11 +496,14 @@ plt.title('F1 Score Over Epochs')
 plt.legend()
 
 plt.tight_layout()
+plt.savefig(os.path.join(results_folder, 'metrics_over_epochs.png'))
 plt.show()
 
+
+import now 
 def evaluate_model(predictions, true_values, sorted_indices, mask, model_name):
     # Define the results folder path
-    results_folder = f'/home/hwg580/thesis/AML-fraud-detector/Results/{model_name}'
+    results_folder = f'/home/hwg580/thesis/AML-fraud-detector/Results/{model_name}/Testing'
     os.makedirs(results_folder, exist_ok=True)
     
     true_values = true_values[mask].float()
