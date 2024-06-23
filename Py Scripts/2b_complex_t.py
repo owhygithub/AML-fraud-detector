@@ -155,6 +155,8 @@ class GNNModel(nn.Module):
 
         print(time_closeness_tensor.size())
         print(heads.size())
+        print(ew.size())
+        print(torch.real(torch.sum(heads * ew * torch.conj(tails), dim=-1)).size())
 
         raw_scores = torch.real(torch.sum(heads * ew * torch.conj(tails), dim=-1)) * time_closeness_tensor
         # raw_scores = torch.sum(element_wise_product, dim=-1) * time_closeness_tensor
