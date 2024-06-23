@@ -26,7 +26,6 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 import pickle
 
 import warnings
-
 warnings.filterwarnings("ignore", category=UserWarning, message="To copy construct from a tensor")
 
 def calculate_mrr(sorted_indices, true_values):
@@ -57,6 +56,11 @@ def calculate_mrr(sorted_indices, true_values):
 
     if len(reciprocal_ranks) == 0:
         return 0.0
+
+    # Calculate the mean reciprocal rank
+    mrr = torch.mean(torch.tensor(reciprocal_ranks, dtype=torch.float32))
+
+    return mrr.item()  # Return MRR as a Python float
 
 print("Started the program...")
 # Specify the file path where the data is saved
