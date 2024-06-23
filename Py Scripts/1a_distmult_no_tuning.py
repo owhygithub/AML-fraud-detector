@@ -210,41 +210,32 @@ def assign_top_n_predictions(val_scores, val_labels):
     return predicted_labels, sorted_indices
 
 def calculate_mrr(sorted_indices, true_values):
-    true_values_tensor = torch.tensor(true_values)  # Convert NumPy array to PyTorch tensor
+    true_values_tensor = torch.tensor(true_values, dtype=torch.float32)  # Convert NumPy array to PyTorch tensor
 
     # Find indices of true positive labels
     positive_indices = torch.nonzero(true_values_tensor).squeeze()
 
-    print(f"Are there TRUE LABELS? - {positive_indices.numel()}")
-
     if positive_indices.numel() == 0:
         return 0.0
 
-    # Map indices in sorted_indices to their ranks --> RANKING
+    # Map indices in sorted_indices to their ranks
     rank_map = {}
     for rank, idx in enumerate(sorted_indices, start=1):
         rank_map[idx.item()] = rank
 
     reciprocal_ranks = []
     for idx in positive_indices:
-        # print(f"Positive at index - {idx}")
         rank = rank_map.get(idx.item(), 0)
-        # print(f"Rank of Positive Index - {rank}")
-        # print(f"Adding to ranks - {1.0 / rank}")
         if rank != 0:
-            reciprocal_ranks.append(1.0 / rank) # 1/20
+            reciprocal_ranks.append(1.0 / rank)
 
     if len(reciprocal_ranks) == 0:
         return 0.0
 
     # Calculate the mean reciprocal rank
-    # print(f"Reciprocal Ranks: {reciprocal_ranks}")
-    # print(f"SUM OF RECIPROCAL RANKS - {torch.sum(torch.tensor(reciprocal_ranks, dtype=torch.float))}")
-    # print(f"Length of positives in labels - {len(positive_indices)}")
-    mrr = torch.sum(torch.tensor(reciprocal_ranks, dtype=torch.float)) / len(positive_indices)
-    # print(f"MRR - {mrr}")
+    mrr = torch.mean(torch.tensor(reciprocal_ranks, dtype=torch.float32))
 
-    return mrr
+    return mrr.item()  # Return MRR as a Python float
 
 # Assuming the data loading and model definition parts remain unchanged
 
