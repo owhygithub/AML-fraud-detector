@@ -133,7 +133,7 @@ class GNNModel(nn.Module):
             updated_edge_attr = edge_attr[:, :new_channels]
         return updated_edge_attr
     
-    def complex(self, axw, ew, head_indices, tail_indices, time_closeness):
+    def complex(self, axw, ew, head_indices, tail_indices, time_closeness_tensor):
         # Convert time_closeness to a tensor (assuming it's already a list)
         # time_closeness_tensor = torch.tensor(time_closeness, dtype=torch.float32, device=axw.device)
 
@@ -148,6 +148,9 @@ class GNNModel(nn.Module):
         heads = torch.complex(heads, torch.zeros_like(heads))
         ew = torch.complex(ew, torch.zeros_like(ew))
         tails = torch.complex(tails, torch.zeros_like(tails))
+
+        print(time_closeness_tensor.size())
+        print(heads.size())
 
         raw_scores = torch.real(torch.sum(heads * ew * torch.conj(tails), dim=-1)) * time_closeness_tensor
         # raw_scores = torch.sum(element_wise_product, dim=-1) * time_closeness_tensor
@@ -195,10 +198,10 @@ model = GNNModel(node_features=input_data.x.size(1), edge_features=input_data.ed
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 criterion = nn.BCEWithLogitsLoss()  # Binary classification loss
 
-def train(data):
+def train(data, time_closeness_tensor):
     model.train()
     optimizer.zero_grad()
-    x_embedding, e_embedding, scores = model(data.x, data.edge_index[:, train_mask], data.edge_attr[train_mask], train_time_closeness)
+    x_embedding, e_embedding, scores = model(data.x, data.edge_index[:, train_mask], data.edge_attr[train_mask], time_closeness_tensor[train_mask])
 
     loss = criterion(scores, labels[train_mask].float())
     loss.backward()
@@ -207,20 +210,21 @@ def train(data):
     return loss.item(), x_embedding, e_embedding, scores
 
 # Validation function
-def validate(data):
+def validate(data, time_closeness_tensor):
     model.eval()
     with torch.no_grad():
-        x_embedding, e_embedding, scores = model(data.x, data.edge_index[:, val_mask], data.edge_attr[val_mask], val_time_closeness)
+        x_embedding, e_embedding, scores = model(data.x, data.edge_index[:, val_mask], data.edge_attr[val_mask], time_closeness_tensor[val_mask])
         val_loss = criterion(scores, labels[val_mask].float()).item()
-    return x_embedding, e_embedding, scores, val_loss
+    return val_loss, x_embedding, e_embedding, scores
 
 # Test function
-def test(data):
+def test(data, time_closeness_tensor):
     model.eval()
     with torch.no_grad():
-        x_embedding, e_embedding, scores = model(data.x, data.edge_index[:, test_mask], data.edge_attr[test_mask], test_time_closeness)
+        x_embedding, e_embedding, scores = model(data.x, data.edge_index[:, test_mask], data.edge_attr[test_mask], time_closeness_tensor[test_mask])
         test_loss = criterion(scores, labels[test_mask].float()).item()
-    return x_embedding, e_embedding, scores, test_loss
+    return test_loss, x_embedding, e_embedding, scores
+
 def assign_top_n_predictions(val_scores, val_labels):
     # Sort indices of val_scores in descending order
     sorted_indices = torch.argsort(val_scores, descending=True)
@@ -335,25 +339,16 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
 
         # print(f"Training model...")
         # Training
-        model.train()
-        # print(f"Applying Zero Grad...")
-        optimizer.zero_grad()
-        # print(f"Getting scores & embeddings...")
-        x_embedding, e_embedding, scores = model(input_data.x, input_data.edge_index[:, train_fold_mask], input_data.edge_attr[train_fold_mask])
-        # print(f"Calculating Loss...")
-        loss = criterion(scores, labels[train_fold_mask].float())
-        # print(f"Backpropagation...")
-        loss.backward()
-        # print(f"Optimizer...")
-        optimizer.step()
+        loss, x_embedding, e_embedding, scores = train(input_data, time_closeness_tensor)
 
         # print(f"Validation evaluation....")
         # Validation
         model.eval()
         # print(f"Getting validation scores & embeddings....")
         with torch.no_grad():
-            val_x_embedding, val_e_embedding, val_scores = model(input_data.x, input_data.edge_index[:, val_fold_mask], input_data.edge_attr[val_fold_mask])
-            val_loss = criterion(val_scores, labels[val_fold_mask].float()).item()
+            val_loss, val_x_embedding, val_e_embedding, val_scores = validate(input_data, time_closeness_tensor)
+            # model(input_data.x, input_data.edge_index[:, val_fold_mask], input_data.edge_attr[val_fold_mask])
+            # val_loss = criterion(val_scores, labels[val_fold_mask].float()).item()
 
         # print(f"Losses....")
         train_losses.append(loss.item())
@@ -607,7 +602,7 @@ model.load_state_dict(best_model_state)
 
 print("Testing...")
 # TEST DATA
-test_x_embedding, test_e_embedding, test_scores, test_loss = test(input_data)
+test_loss, test_x_embedding, test_e_embedding, test_scores = test(input_data, time_closeness_tensor)
 print(f"Test Loss: {test_loss:.4f}")
 
 test_labels = labels[test_mask]
