@@ -247,6 +247,7 @@ def calculate_mrr(sorted_indices, true_values):
         if rank == 0:
             continue
         ranks[i] = rank
+        
 print("Training Loop...")
 # K-fold Cross-Validation
 k = 5
