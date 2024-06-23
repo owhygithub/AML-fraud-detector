@@ -208,7 +208,7 @@ criterion = nn.BCEWithLogitsLoss()  # Binary classification loss
 def train(data):
     model.train()
     optimizer.zero_grad()
-    x_embedding, e_embedding, scores_train, _, _ = model(data.x, data.edge_index, data.edge_attr, train_mask=train_mask)
+    x_embedding, e_embedding, scores_train = model(data.x, data.edge_index[:, train_mask], data.edge_attr[train_mask], train_mask=train_mask)
 
     loss = criterion(scores_train, labels[train_mask].float())
     loss.backward()
@@ -220,7 +220,7 @@ def train(data):
 def validate(data):
     model.eval()
     with torch.no_grad():
-        _, _, _, scores_val = model(data.x, data.edge_index, data.edge_attr, val_mask=val_mask)
+        x_embedding, e_embedding, scores_val = model(data.x, data.edge_index[:, val_mask], data.edge_attr[val_mask], val_mask=val_mask)
         val_loss = criterion(scores_val, labels[val_mask].float()).item()
     return scores_val, val_loss
 
@@ -228,9 +228,9 @@ def validate(data):
 def test(data):
     model.eval()
     with torch.no_grad():
-        _, _, _, scores_test = model(data.x, data.edge_index, data.edge_attr, test_mask=test_mask)
-        test_loss = criterion(scores_test, labels[test_mask].float()).item()
-    return scores_test, test_loss
+        x_embedding, e_embedding, scores = model(data.x, data.edge_index[:, test_mask], data.edge_attr[test_mask], test_mask=test_mask)
+        test_loss = criterion(scores, labels[test_mask].float()).item()
+    return x_embedding, e_embedding, scores, test_loss
 
 def assign_top_n_predictions(val_scores, val_labels):
     # Sort indices of val_scores in descending order
@@ -350,7 +350,7 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
         # print(f"Applying Zero Grad...")
         optimizer.zero_grad()
         # print(f"Getting scores & embeddings...")
-        x_embedding, e_embedding, scores = model(input_data.x, input_data.edge_index[:, train_fold_mask], input_data.edge_attr[train_fold_mask])
+        x_embedding, e_embedding, scores = model(input_data.x, input_data.edge_index[:, train_fold_mask], input_data.edge_attr[train_fold_mask], train_mask=train_fold_mask)
         # print(f"Calculating Loss...")
         loss = criterion(scores, labels[train_fold_mask].float())
         # print(f"Backpropagation...")
@@ -363,7 +363,7 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
         model.eval()
         # print(f"Getting validation scores & embeddings....")
         with torch.no_grad():
-            val_x_embedding, val_e_embedding, val_scores = model(input_data.x, input_data.edge_index[:, val_fold_mask], input_data.edge_attr[val_fold_mask])
+            val_x_embedding, val_e_embedding, val_scores = model(input_data.x, input_data.edge_index[:, val_fold_mask], input_data.edge_attr[val_fold_mask], train_mask=val_fold_mask)
             val_loss = criterion(val_scores, labels[val_fold_mask].float()).item()
 
         # print(f"Losses....")

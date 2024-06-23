@@ -228,6 +228,7 @@ def test(data):
         x_embedding, e_embedding, scores = model(data.x, data.edge_index[:, test_mask], data.edge_attr[test_mask])
         test_loss = criterion(scores, labels[test_mask].float()).item()
     return x_embedding, e_embedding, scores, test_loss
+
 def assign_top_n_predictions(val_scores, val_labels):
     # Sort indices of val_scores in descending order
     sorted_indices = torch.argsort(val_scores, descending=True)
