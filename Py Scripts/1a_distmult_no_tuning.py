@@ -262,6 +262,7 @@ best_epoch_metrics = {
 }
 
 for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(input_data.edge_attr.shape[0]))):
+    print(f"Fold {fold}/{k}")
     train_fold_mask = torch.zeros(input_data.edge_attr.shape[0], dtype=torch.bool)
     val_fold_mask = torch.zeros(input_data.edge_attr.shape[0], dtype=torch.bool)
 

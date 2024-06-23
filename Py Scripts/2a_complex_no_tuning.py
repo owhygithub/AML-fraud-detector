@@ -269,6 +269,7 @@ best_epoch_metrics = {
 }
 
 for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(input_data.edge_attr.shape[0]))):
+    print(f"Fold {fold}/{k}")
     train_fold_mask = torch.zeros(input_data.edge_attr.shape[0], dtype=torch.bool)
     val_fold_mask = torch.zeros(input_data.edge_attr.shape[0], dtype=torch.bool)
 
@@ -318,6 +319,9 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
         val_recall = recall_score(val_labels, val_predictions)
         val_f1 = f1_score(val_labels, val_predictions)
         val_mrr = calculate_mrr(torch.argsort(val_scores, descending=True), val_labels)
+
+        print(f"\nEpoch {epoch}, Training Loss: {loss:.4f}, Validation Loss: {val_loss:.4f}")
+        print(f"Accuracy: {val_accuracy:.4f}, Precision: {val_precision:.4f}, Recall: {val_recall:.4f}, F1 Score: {val_f1:.4f}, MRR: {val_mrr:.4f}")
 
         # Store metrics for this epoch
         fold_accuracy_list.append(val_accuracy)
