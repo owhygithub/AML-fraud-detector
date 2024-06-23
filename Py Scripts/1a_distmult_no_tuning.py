@@ -209,14 +209,30 @@ def assign_top_n_predictions(val_scores, val_labels):
     return predicted_labels, sorted_indices
 
 def calculate_mrr(sorted_indices, true_values):
+    # Find indices of true positive labels
     positive_indices = torch.nonzero(true_values).squeeze()
+
     if positive_indices.numel() == 0:
         return 0.0
 
-    # Map positive indices to their ranks in the sorted list
-    ranks = torch.nonzero(sorted_indices.unsqueeze(1) == positive_indices.unsqueeze(0)).float()[:, 0] + 1
+    # Create a tensor to store ranks
+    ranks = torch.zeros_like(positive_indices, dtype=torch.float)
+    
+    # Create a dictionary to store the index of each element in the sorted_indices tensor
+    index_map = {val.item(): idx for idx, val in enumerate(sorted_indices)}
 
-    mrr = (1.0 / ranks).mean().item()
+    # Iterate through each true positive label
+    for i, idx in enumerate(positive_indices):
+        # Find the rank of the true positive label in sorted indices
+        rank = index_map.get(idx.item(), -1) + 1
+        if rank == 0:
+            continue
+        ranks[i] = rank
+
+    # Calculate reciprocal ranks and then mean reciprocal rank
+    reciprocal_ranks = 1.0 / ranks
+    mrr = reciprocal_ranks.mean().item()
+
     return mrr
 
 print("Training Loop...")
@@ -359,7 +375,7 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
             patience_counter += 1
             if patience_counter > patience:
                 break
-            
+
     print(f"Storing Metrics for fold....")
     # Store metrics for the fold
     fold_accuracy_list.append(best_fold_best_metrics['accuracy'])
