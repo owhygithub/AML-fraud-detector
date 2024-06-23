@@ -69,6 +69,16 @@ val_mask[val_indices] = True
 test_mask[test_indices] = True
 print("Mask data created...")
 
+# Convert time_closeness to a tensor
+time_closeness_tensor = torch.tensor(time_closeness, dtype=torch.float32)
+train_time_closeness = time_closeness_tensor[train_mask]
+val_time_closeness = time_closeness_tensor[val_mask]
+test_time_closeness = time_closeness_tensor[test_mask]
+
+print(train_time_closeness.size())
+print(val_time_closeness.size())
+print(test_time_closeness.size())
+
     
 # Define your GNNLayer class
 class GNNLayer(MessagePassing):
@@ -314,7 +324,7 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
         # Validation
         model.eval()
         with torch.no_grad():
-            val_x_embedding, val_e_embedding, val_scores = model(input_data.x, input_data.edge_index[:, val_fold_mask], input_data.edge_attr[val_fold_mask], time_closeness_tensor[train_fold_mask])
+            val_x_embedding, val_e_embedding, val_scores = model(input_data.x, input_data.edge_index[:, val_fold_mask], input_data.edge_attr[val_fold_mask], time_closeness_tensor[val_fold_mask])
             val_loss = criterion(val_scores, labels[val_fold_mask].float()).item()
 
         train_losses.append(loss.item())

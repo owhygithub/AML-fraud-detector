@@ -338,7 +338,7 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
         # Validation
         model.eval()
         with torch.no_grad():
-            val_x_embedding, val_e_embedding, val_scores = model(input_data.x, input_data.edge_index[:, val_fold_mask], input_data.edge_attr[val_fold_mask], time_closeness_tensor[train_fold_mask])
+            val_x_embedding, val_e_embedding, val_scores = model(input_data.x, input_data.edge_index[:, val_fold_mask], input_data.edge_attr[val_fold_mask], time_closeness_tensor[val_fold_mask])
             val_loss = criterion(val_scores, labels[val_fold_mask].float()).item()
 
         train_losses.append(loss.item())
