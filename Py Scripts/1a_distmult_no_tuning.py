@@ -211,7 +211,7 @@ def assign_top_n_predictions(val_scores, val_labels):
 
 
 def calculate_mrr(sorted_indices, true_values):
-    true_values_tensor = torch.tensor(true_values, dtype=torch.float32).clone().detach()
+    true_values_tensor = torch.tensor(true_values, dtype=torch.float32).detach().requires_grad_(True)
 
     # Find indices of true positive labels
     positive_indices = torch.nonzero(true_values_tensor).squeeze()
