@@ -1,0 +1,18 @@
+-- HYPERPARAMS:
+TimeStamp: 20240623175930
+Model: ComplEx-T+W
+learning_rate: 0.0001
+out_channels: 15
+Epoch: 50
+
+Weight_decay: 5e-05
+
+Dropout: 0.1
+
+-- RESULTS:
+Loss: 0.9212253093719482
+Accuracy: 0.5375
+Precision: 0.10510261885049457
+Recall: 0.4824
+F1 Score: 0.1726000930265841
+MRR: 6.172286521177739e-05
