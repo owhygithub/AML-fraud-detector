@@ -1,6 +1,4 @@
 torch
-torch_sparse
-torch_scatter
 pandas
 networkx
 matplotlib
@@ -9,3 +7,5 @@ optuna
 scikit-learn
 seaborn
 numpy
+torch_scatter
+torch_sparse-0.6.9.tar.gz
