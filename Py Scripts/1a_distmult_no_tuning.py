@@ -226,7 +226,10 @@ def calculate_mrr(sorted_indices, true_values):
 
     reciprocal_ranks = []
     for idx in positive_indices:
+        print(f"Positive at index - {idx}")
         rank = rank_map.get(idx.item(), 0)
+        print(f"Rank of Positive Index - {rank}")
+        print(f"Adding to ranks - {1.0 / rank}")
         if rank != 0:
             reciprocal_ranks.append(1.0 / rank) # 1/20
 
@@ -234,6 +237,7 @@ def calculate_mrr(sorted_indices, true_values):
         return 0.0
 
     # Calculate the mean reciprocal rank
+    print(f"Reciprocal Ranks: {reciprocal_ranks}")
     print(f"SUM OF RECIPROCAL RANKS - {torch.sum(torch.tensor(reciprocal_ranks, dtype=torch.float))}")
     print(f"Length of positives in labels - {len(positive_indices)}")
     mrr = torch.sum(torch.tensor(reciprocal_ranks, dtype=torch.float)) / len(positive_indices)
