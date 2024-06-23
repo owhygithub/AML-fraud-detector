@@ -147,6 +147,11 @@ class GNNModel(nn.Module):
         # Perform element-wise multiplication
         # complex_product = heads * ew * torch.conj(tails)
 
+        # Convert real tensors to complex tensors
+        heads = torch.complex(heads, torch.zeros_like(heads))
+        ew = torch.complex(ew, torch.zeros_like(ew))
+        tails = torch.complex(tails, torch.zeros_like(tails))
+
         # Sum along the appropriate dimension (dim=0 or dim=-1 based on your requirement)
         raw_scores = torch.real(torch.sum(heads * ew * torch.conj(tails), dim=-1))  # Sum along the last dimension
         # print(raw_scores)
