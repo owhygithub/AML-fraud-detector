@@ -25,6 +25,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 import pickle
 
 import warnings
+warnings.filterwarnings("ignore", category=UserWarning, message="To copy construct from a tensor")
 
 def calculate_mrr(sorted_indices, true_values):
     # Suppress the specific UserWarning
@@ -157,11 +158,11 @@ class GNNModel(nn.Module):
         super(GNNModel, self).__init__()
         self.conv1 = GNNLayer(node_features, edge_features, out_channels, dropout)
     
-    def forward(self, x, edge_index, edge_attr):
+    def forward(self, x, edge_index, edge_attr, time_closeness_tensor):
         axw1, ew1 = self.conv1(x, edge_index, edge_attr)
 
         head_indices, tail_indices = self.mapping(ew1, edge_index)
-        scores = self.dismult(axw1, ew1, head_indices, tail_indices, time_closeness) # add the timestamp
+        scores = self.dismult(axw1, ew1, head_indices, tail_indices, time_closeness_tensor) # add the timestamp
         
         return axw1, ew1, scores # returning x and e embeddings
 
@@ -173,9 +174,9 @@ class GNNModel(nn.Module):
             updated_edge_attr = edge_attr[:, :new_channels]
         return updated_edge_attr
     
-    def dismult(self, axw, ew, head_indices, tail_indices, time_closeness):
+    def dismult(self, axw, ew, head_indices, tail_indices, time_closeness_tensor):
         # Convert time_closeness to a tensor (assuming it's already a list)
-        time_closeness_tensor = torch.tensor(time_closeness, dtype=torch.float32, device=axw.device)
+        # time_closeness_tensor = torch.tensor(time_closeness, dtype=torch.float32, device=axw.device)
 
         # Gather node embeddings and edge features for head and tail nodes
         head_embeddings = axw[head_indices]

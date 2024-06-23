@@ -24,6 +24,8 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 # LOADING GRAPH from Jupyter Notebook 
 
 import pickle
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, message="To copy construct from a tensor")
 
 print("Started the program...")
 # Specify the file path where the data is saved

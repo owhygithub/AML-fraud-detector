@@ -26,6 +26,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 import pickle
 
 import warnings
+warnings.filterwarnings("ignore", category=UserWarning, message="To copy construct from a tensor")
 
 def calculate_mrr(sorted_indices, true_values):
     # Suppress the specific UserWarning
