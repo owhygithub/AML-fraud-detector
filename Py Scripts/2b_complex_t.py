@@ -48,6 +48,8 @@ input_data = saved_data['input_data']
 time_closeness = saved_data['time_closeness']
 adjacency_tensor = saved_data['adjacency_tensor']
 
+time_closeness_tensor = torch.tensor(time_closeness, dtype=torch.float32)
+
 print("Splitting data...")
 # Split the nodes into training, validation, and test sets
 num_edges = edges_features.shape[0]
@@ -126,9 +128,9 @@ class GNNModel(nn.Module):
             updated_edge_attr = edge_attr[:, :new_channels]
         return updated_edge_attr
     
-    def complex(self, axw, ew, head_indices, tail_indices, time_closeness):
+    def complex(self, axw, ew, head_indices, tail_indices, time_closeness_tensor):
         # Convert time_closeness to a tensor (assuming it's already a list)
-        time_closeness_tensor = torch.tensor(time_closeness, dtype=torch.float32, device=axw.device)
+        # time_closeness_tensor = torch.tensor(time_closeness, dtype=torch.float32, device=axw.device)
 
         # Gather node embeddings and edge features for head and tail nodes
         heads = axw[head_indices]
@@ -196,7 +198,7 @@ criterion = nn.BCEWithLogitsLoss()  # Binary classification loss
 def train(data):
     model.train()
     optimizer.zero_grad()
-    x_embedding, e_embedding, scores = model(data.x, data.edge_index[:, train_mask], data.edge_attr[train_mask])
+    x_embedding, e_embedding, scores = model(data.x, data.edge_index[:, train_mask], data.edge_attr[train_mask], time_closeness_tensor[train_mask])
 
     loss = criterion(scores, labels[train_mask].float())
     loss.backward()
@@ -208,7 +210,7 @@ def train(data):
 def validate(data):
     model.eval()
     with torch.no_grad():
-        x_embedding, e_embedding, scores = model(data.x, data.edge_index[:, val_mask], data.edge_attr[val_mask])
+        x_embedding, e_embedding, scores = model(data.x, data.edge_index[:, val_mask], data.edge_attr[val_mask], time_closeness_tensor[val_mask])
         val_loss = criterion(scores, labels[val_mask].float()).item()
     return x_embedding, e_embedding, scores, val_loss
 
@@ -216,9 +218,10 @@ def validate(data):
 def test(data):
     model.eval()
     with torch.no_grad():
-        x_embedding, e_embedding, scores = model(data.x, data.edge_index[:, test_mask], data.edge_attr[test_mask])
+        x_embedding, e_embedding, scores = model(data.x, data.edge_index[:, test_mask], data.edge_attr[test_mask], time_closeness_tensor[test_mask])
         test_loss = criterion(scores, labels[test_mask].float()).item()
     return x_embedding, e_embedding, scores, test_loss
+
 def assign_top_n_predictions(val_scores, val_labels):
     # Sort indices of val_scores in descending order
     sorted_indices = torch.argsort(val_scores, descending=True)
