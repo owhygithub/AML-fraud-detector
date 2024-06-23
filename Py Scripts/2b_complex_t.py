@@ -149,8 +149,8 @@ class GNNModel(nn.Module):
         ew = torch.complex(ew, torch.zeros_like(ew))
         tails = torch.complex(tails, torch.zeros_like(tails))
 
-        print(time_closeness_tensor.size())
-        print(heads.size())
+        # print(time_closeness_tensor.size())
+        # print(heads.size())
 
         raw_scores = torch.real(torch.sum(heads * ew * torch.conj(tails), dim=-1)) * time_closeness_tensor
         # raw_scores = torch.sum(element_wise_product, dim=-1) * time_closeness_tensor
@@ -351,7 +351,7 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
             # val_loss = criterion(val_scores, labels[val_fold_mask].float()).item()
 
         # print(f"Losses....")
-        train_losses.append(loss.item())
+        train_losses.append(loss)
         val_losses.append(val_loss)
 
         # print(f"Labels....")
