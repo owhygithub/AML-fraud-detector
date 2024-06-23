@@ -244,6 +244,8 @@ def assign_top_n_predictions(val_scores, val_labels):
 
     return predicted_labels, sorted_indices
 
+# Assuming the data loading and model definition parts remain unchanged
+
 # Initialize lists for storing fold-wise metrics
 fold_accuracy_list = []
 fold_precision_list = []
@@ -269,7 +271,7 @@ best_epoch_metrics = {
 }
 
 for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(input_data.edge_attr.shape[0]))):
-    print(f"Fold {fold}/{k}")
+    print(f"Fold {fold+1}/{k}")
     train_fold_mask = torch.zeros(input_data.edge_attr.shape[0], dtype=torch.bool)
     val_fold_mask = torch.zeros(input_data.edge_attr.shape[0], dtype=torch.bool)
 
