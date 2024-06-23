@@ -306,8 +306,16 @@ best_epoch_metrics = {
     'accuracy': [],
     'precision': [],
     'recall': [],
-    'f1': []
+    'f1': [],
+    'mrr': []
 }
+
+# Initialize variables for average metrics across all folds
+avg_accuracy = 0.0
+avg_precision = 0.0
+avg_recall = 0.0
+avg_f1 = 0.0
+avg_mrr = 0.0
 
 for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(input_data.edge_attr.shape[0]))):
     print(f"Fold {fold+1}/{k}")
@@ -385,6 +393,7 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
     best_epoch_metrics['precision'].append(current_fold_best_metrics['precision'])
     best_epoch_metrics['recall'].append(current_fold_best_metrics['recall'])
     best_epoch_metrics['f1'].append(current_fold_best_metrics['f1'])
+    best_epoch_metrics['mrr'].append(current_fold_best_metrics['mrr'])
 
     # Append training and validation losses for the current fold
     best_train_losses.append(train_losses)
@@ -395,7 +404,29 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
         best_recall = current_fold_best_metrics['recall']
         best_fold = fold
 
+    # Accumulate fold-wise metrics for averaging later
+    fold_accuracy_list.append(current_fold_best_metrics['accuracy'])
+    fold_precision_list.append(current_fold_best_metrics['precision'])
+    fold_recall_list.append(current_fold_best_metrics['recall'])
+    fold_f1_list.append(current_fold_best_metrics['f1'])
+    fold_mrr_list.append(current_fold_best_metrics['mrr'])
+
 # End of fold loop
+
+# Calculate average metrics across all folds
+avg_accuracy = sum(fold_accuracy_list) / k
+avg_precision = sum(fold_precision_list) / k
+avg_recall = sum(fold_recall_list) / k
+avg_f1 = sum(fold_f1_list) / k
+avg_mrr = sum(fold_mrr_list) / k
+
+# Print average metrics across all folds
+print("\nAverage Metrics Across All Folds:")
+print(f"Avg Accuracy: {avg_accuracy:.4f}")
+print(f"Avg Precision: {avg_precision:.4f}")
+print(f"Avg Recall: {avg_recall:.4f}")
+print(f"Avg F1 Score: {avg_f1:.4f}")
+print(f"Avg MRR: {avg_mrr:.4f}")
 
 # Print best metrics across all folds
 if best_fold >= 0:
@@ -404,23 +435,22 @@ if best_fold >= 0:
     print(f"Best Precision: {best_epoch_metrics['precision'][best_fold]:.4f}")
     print(f"Best Recall: {best_epoch_metrics['recall'][best_fold]:.4f}")
     print(f"Best F1 Score: {best_epoch_metrics['f1'][best_fold]:.4f}")
-    print(f"Best MRR: {best_epoch_metrics['mrr']:.4f}")
+    print(f"Best MRR: {best_epoch_metrics['mrr'][best_fold]:.4f}")
 
 # Save the best model based on the highest recall score
 if best_model_state is not None:
+    model_name = "your_model_name"
     torch.save(best_model_state, f'/var/scratch/hwg580/{model_name}_best.pt')
     print(f"\nBest model saved with highest recall: {best_recall:.4f}")
 
 # Plotting graphs for best performing model (fold)
-
-# Plot Training and Validation Losses
-epoch_numbers = list(range(1, len(best_train_losses[best_fold]) + 1))  # Use the length from the best fold
-
 # Define the results folder path
 results_folder = f'/home/hwg580/thesis/AML-fraud-detector/Results/{model_name}/Validation'
 os.makedirs(results_folder, exist_ok=True)
 
-# Plot Training and Validation Losses Over Epochs for the best fold
+# Plot Training and Validation Losses
+epoch_numbers = list(range(1, len(best_train_losses[best_fold]) + 1))  # Use the length from the best fold
+
 plt.figure(figsize=(10, 6))
 plt.plot(epoch_numbers, best_train_losses[best_fold], label="Training Loss")
 plt.plot(epoch_numbers, best_val_losses[best_fold], label="Validation Loss")
@@ -442,6 +472,9 @@ plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
 plt.title('Accuracy Over Epochs')
 plt.legend()
+plt.grid(True)
+plt.savefig(os.path.join(results_folder, 'Accuracy Over Epochs'))
+plt.show()
 
 # Precision
 plt.subplot(2, 2, 2)
@@ -450,6 +483,9 @@ plt.xlabel('Epoch')
 plt.ylabel('Precision')
 plt.title('Precision Over Epochs')
 plt.legend()
+plt.grid(True)
+plt.savefig(os.path.join(results_folder, 'Precision Over Epochs'))
+plt.show()
 
 # Recall
 plt.subplot(2, 2, 3)
@@ -458,6 +494,9 @@ plt.xlabel('Epoch')
 plt.ylabel('Recall')
 plt.title('Recall Over Epochs')
 plt.legend()
+plt.grid(True)
+plt.savefig(os.path.join(results_folder, 'Recall Over Epochs'))
+plt.show()
 
 # F1 Score
 plt.subplot(2, 2, 4)
@@ -466,10 +505,11 @@ plt.xlabel('Epoch')
 plt.ylabel('F1 Score')
 plt.title('F1 Score Over Epochs')
 plt.legend()
+plt.grid(True)
+plt.savefig(os.path.join(results_folder, 'F1 Score Over Epochs'))
+plt.show()
 
 plt.tight_layout()
-plt.savefig(os.path.join(results_folder, 'metrics_over_epochs.png'))
-plt.show()
 
 
 import now 
