@@ -237,6 +237,7 @@ def calculate_mrr(sorted_indices, true_values):
     for idx in positive_indices:
         print(f"Positive at index - {idx}")
         rank = rank_map.get(idx.item(), 0)
+        rank += 1
         print(f"Rank of Positive Index - {rank}")
         print(f"Adding to ranks - {1.0 / rank}")
         if rank != 0:
