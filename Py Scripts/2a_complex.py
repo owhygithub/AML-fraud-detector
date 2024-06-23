@@ -148,7 +148,7 @@ class GNNModel(nn.Module):
         # complex_product = heads * ew * torch.conj(tails)
 
         # Sum along the appropriate dimension (dim=0 or dim=-1 based on your requirement)
-        raw_scores = torch.sum(heads * ew * torch.conj(tails), dim=0)  # Sum along the last dimension
+        raw_scores = torch.sum(heads * ew * torch.conj(tails), dim=-1)  # Sum along the last dimension
         print(raw_scores)
         print(raw_scores.size())
 
