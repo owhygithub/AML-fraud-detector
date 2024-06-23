@@ -10,6 +10,7 @@ import torch
 import optuna
 import pickle
 import random
+import datetime
 from datetime import datetime
 import torch.nn as nn
 import seaborn as sns
@@ -251,30 +252,41 @@ def assign_predictions(val_scores, threshold=0.5):
     return predicted_labels
 
 def calculate_mrr(sorted_indices, true_values):
+    true_values_tensor = torch.tensor(true_values)  # Convert NumPy array to PyTorch tensor
+
     # Find indices of true positive labels
-    positive_indices = torch.nonzero(true_values).squeeze()
+    positive_indices = torch.nonzero(true_values_tensor).squeeze()
+
+    print(f"Are there TRUE LABELS? - {positive_indices.numel()}")
 
     if positive_indices.numel() == 0:
         return 0.0
 
-    # Map indices in sorted_indices to their ranks
+    # Map indices in sorted_indices to their ranks --> RANKING
     rank_map = {}
     for rank, idx in enumerate(sorted_indices, start=1):
         rank_map[idx.item()] = rank
 
     reciprocal_ranks = []
     for idx in positive_indices:
+        # print(f"Positive at index - {idx}")
         rank = rank_map.get(idx.item(), 0)
+        # print(f"Rank of Positive Index - {rank}")
+        # print(f"Adding to ranks - {1.0 / rank}")
         if rank != 0:
-            reciprocal_ranks.append(1.0 / rank)
+            reciprocal_ranks.append(1.0 / rank) # 1/20
 
     if len(reciprocal_ranks) == 0:
         return 0.0
 
     # Calculate the mean reciprocal rank
-    mrr = torch.mean(torch.tensor(reciprocal_ranks, dtype=torch.float))
+    # print(f"Reciprocal Ranks: {reciprocal_ranks}")
+    # print(f"SUM OF RECIPROCAL RANKS - {torch.sum(torch.tensor(reciprocal_ranks, dtype=torch.float))}")
+    # print(f"Length of positives in labels - {len(positive_indices)}")
+    mrr = torch.sum(torch.tensor(reciprocal_ranks, dtype=torch.float)) / len(positive_indices)
+    # print(f"MRR - {mrr}")
 
-    return mrr.item()
+    return mrr
 
 
 # Initialize lists for storing fold-wise metrics
@@ -641,7 +653,7 @@ def log_experiment(model_name, learning_rate, out_channels, epoch, weight_decay,
         os.makedirs(folder_name)
     
     # Save metrics and other information to a file
-    timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     file_name = f"{folder_name}/run_{timestamp}.txt"
     with open(file_name, "w") as f:
         f.write(f"-- HYPERPARAMS:\n")
