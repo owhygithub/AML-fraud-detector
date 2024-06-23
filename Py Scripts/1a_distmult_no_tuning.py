@@ -215,7 +215,6 @@ def calculate_mrr(sorted_indices, true_values):
     positive_indices = torch.nonzero(true_values_tensor).squeeze()
 
     print(f"Are there TRUE LABELS? - {positive_indices.numel()}")
-    print(f"Length of positives in labels - {len(positive_indices)}")
 
     if positive_indices.numel() == 0:
         return 0.0
@@ -235,10 +234,12 @@ def calculate_mrr(sorted_indices, true_values):
         return 0.0
 
     # Calculate the mean reciprocal rank
-    mrr = torch.tensor(reciprocal_ranks, dtype=torch.float) / len(positive_indices)
-    print(mrr)
+    print(f"SUM OF RECIPROCAL RANKS - {torch.sum(torch.tensor(reciprocal_ranks, dtype=torch.float))}")
+    print(f"Length of positives in labels - {len(positive_indices)}")
+    mrr = torch.sum(torch.tensor(reciprocal_ranks, dtype=torch.float)) / len(positive_indices)
+    print(f"MRR - {mrr}")
 
-    return mrr.item()
+    return mrr
 
 # Assuming the data loading and model definition parts remain unchanged
 
