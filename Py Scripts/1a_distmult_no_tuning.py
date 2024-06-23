@@ -235,6 +235,8 @@ def calculate_mrr(sorted_indices, true_values):
 
     return mrr
 
+# Assuming the data loading and model definition parts remain unchanged
+
 # Initialize lists for storing fold-wise metrics
 fold_accuracy_list = []
 fold_precision_list = []
@@ -249,6 +251,15 @@ kf = KFold(n_splits=k, shuffle=True, random_state=42)
 # Initialize variables to track best model
 best_model_state = None
 best_recall = -1.0  # Initialize to a low value
+best_fold_best_metrics = None
+best_train_losses = []
+best_val_losses = []
+best_epoch_metrics = {
+    'accuracy': [],
+    'precision': [],
+    'recall': [],
+    'f1': []
+}
 
 for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(input_data.edge_attr.shape[0]))):
     train_fold_mask = torch.zeros(input_data.edge_attr.shape[0], dtype=torch.bool)
@@ -264,8 +275,15 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
 
     train_losses = []
     val_losses = []
-    best_fold_val_loss = float('inf')
-    best_fold_best_metrics = None
+    current_fold_best_metrics = {
+        'accuracy': -1.0,
+        'precision': -1.0,
+        'recall': -1.0,
+        'f1': -1.0,
+        'mrr': -1.0,
+        'val_predictions': None,
+        'sorted_indices': None
+    }
 
     for epoch in range(epochs):
         # Training
@@ -294,10 +312,6 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
         val_f1 = f1_score(val_labels, val_predictions)
         val_mrr = calculate_mrr(torch.argsort(val_scores, descending=True), val_labels)
 
-        # Print metrics for debugging
-        print(f"\nFold {fold + 1}, Epoch {epoch + 1}, Training Loss: {loss:.4f}, Validation Loss: {val_loss:.4f}")
-        print(f"Accuracy: {val_accuracy:.4f}, Precision: {val_precision:.4f}, Recall: {val_recall:.4f}, F1 Score: {val_f1:.4f}, MRR: {val_mrr:.4f}")
-
         # Store metrics for this epoch
         fold_accuracy_list.append(val_accuracy)
         fold_precision_list.append(val_precision)
@@ -306,8 +320,8 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
         fold_mrr_list.append(val_mrr)
 
         # Track best model based on highest recall
-        if best_fold_best_metrics is None or val_recall > best_fold_best_metrics['recall']:
-            best_fold_best_metrics = {
+        if val_recall > current_fold_best_metrics['recall']:
+            current_fold_best_metrics = {
                 'accuracy': val_accuracy,
                 'precision': val_precision,
                 'recall': val_recall,
@@ -316,22 +330,37 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
                 'val_predictions': val_predictions,
                 'sorted_indices': torch.argsort(val_scores, descending=True)
             }
-            # Save the best model state
+            # Save the best model state for the current fold
             best_model_state = model.state_dict()
+
+        # Append metrics for best performing epoch (fold)
+        if current_fold_best_metrics['recall'] == val_recall:
+            best_epoch_metrics['accuracy'].append(val_accuracy)
+            best_epoch_metrics['precision'].append(val_precision)
+            best_epoch_metrics['recall'].append(val_recall)
+            best_epoch_metrics['f1'].append(val_f1)
 
     # End of epoch loop for the fold
 
-    # Print best metrics for the fold
-    print(f"\nBest Metrics for Fold {fold + 1}:")
+    # Append training and validation losses for best performing epoch (fold)
+    best_train_losses.append(train_losses)
+    best_val_losses.append(val_losses)
+
+    # Update overall best model based on highest recall across all folds
+    if current_fold_best_metrics['recall'] > best_recall:
+        best_recall = current_fold_best_metrics['recall']
+        best_fold_best_metrics = current_fold_best_metrics
+
+# End of fold loop
+
+# Print best metrics across all folds
+if best_fold_best_metrics is not None:
+    print("\nBest Model Metrics:")
     print(f"Best Accuracy: {best_fold_best_metrics['accuracy']:.4f}")
     print(f"Best Precision: {best_fold_best_metrics['precision']:.4f}")
     print(f"Best Recall: {best_fold_best_metrics['recall']:.4f}")
     print(f"Best F1 Score: {best_fold_best_metrics['f1']:.4f}")
     print(f"Best MRR: {best_fold_best_metrics['mrr']:.4f}")
-
-    # Update overall best model based on highest recall across all folds
-    if best_fold_best_metrics['recall'] > best_recall:
-        best_recall = best_fold_best_metrics['recall']
 
 # Calculate average metrics across all folds
 avg_accuracy = np.mean(fold_accuracy_list)
@@ -352,12 +381,15 @@ if best_model_state is not None:
     torch.save(best_model_state, f'/var/scratch/hwg580/{model_name}_best.pt')
     print(f"\nBest model saved with highest recall: {best_recall:.4f}")
 
-# Plot
-epoch_numbers = list(range(1, len(best_train_losses) + 1))
+# Plotting graphs for best performing model (fold)
+
+# Plot Training and Validation Losses
+epoch_numbers = list(range(1, len(best_train_losses[0]) + 1))  # Assuming all folds have the same number of epochs
 
 plt.figure(figsize=(10, 6))
-plt.plot(epoch_numbers, best_train_losses, label="Training Loss")
-plt.plot(epoch_numbers, best_val_losses, label="Validation Loss")
+for i in range(k):
+    plt.plot(epoch_numbers, best_train_losses[i], label=f"Fold {i+1} Training Loss")
+    plt.plot(epoch_numbers, best_val_losses[i], label=f"Fold {i+1} Validation Loss")
 plt.xlabel("Epochs")
 plt.ylabel("Losses")
 plt.title("Training and Validation Losses Over Epochs")
@@ -365,34 +397,43 @@ plt.legend()
 plt.grid(True)
 plt.show()
 
-plt.figure(figsize=(10, 8))
+# Plot Accuracy, Precision, Recall, and F1 Score
+plt.figure(figsize=(14, 10))
 
 # Accuracy
 plt.subplot(2, 2, 1)
-plt.plot(best_epoch_metrics['accuracy'], label='Accuracy')
+for i in range(k):
+    plt.plot(best_epoch_metrics['accuracy'][i], label=f"Fold {i+1} Accuracy")
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
+plt.title('Accuracy Over Epochs')
 plt.legend()
 
 # Precision
 plt.subplot(2, 2, 2)
-plt.plot(best_epoch_metrics['precision'], label='Precision')
+for i in range(k):
+    plt.plot(best_epoch_metrics['precision'][i], label=f"Fold {i+1} Precision")
 plt.xlabel('Epoch')
 plt.ylabel('Precision')
+plt.title('Precision Over Epochs')
 plt.legend()
 
 # Recall
 plt.subplot(2, 2, 3)
-plt.plot(best_epoch_metrics['recall'], label='Recall')
+for i in range(k):
+    plt.plot(best_epoch_metrics['recall'][i], label=f"Fold {i+1} Recall")
 plt.xlabel('Epoch')
 plt.ylabel('Recall')
+plt.title('Recall Over Epochs')
 plt.legend()
 
 # F1 Score
 plt.subplot(2, 2, 4)
-plt.plot(best_epoch_metrics['f1'], label='F1 Score')
+for i in range(k):
+    plt.plot(best_epoch_metrics['f1'][i], label=f"Fold {i+1} F1 Score")
 plt.xlabel('Epoch')
 plt.ylabel('F1 Score')
+plt.title('F1 Score Over Epochs')
 plt.legend()
 
 plt.tight_layout()

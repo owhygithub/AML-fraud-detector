@@ -340,6 +340,7 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
         # print(f"Training model...")
         # Training
         loss, x_embedding, e_embedding, scores = train(input_data, time_closeness_tensor)
+        print(scores.size())
 
         # print(f"Validation evaluation....")
         # Validation
@@ -350,6 +351,7 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
             # model(input_data.x, input_data.edge_index[:, val_fold_mask], input_data.edge_attr[val_fold_mask])
             # val_loss = criterion(val_scores, labels[val_fold_mask].float()).item()
 
+        print(val_scores.size())
         # print(f"Losses....")
         train_losses.append(loss)
         val_losses.append(val_loss)
