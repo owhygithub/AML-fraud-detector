@@ -3,6 +3,7 @@
 model_name = "ComplEx-T+W"
 
 import numpy as np
+
 import os
 import csv
 import math
@@ -202,9 +203,9 @@ class GNNModel(nn.Module):
         raw_scores = torch.real(torch.sum(heads * ew * torch.conj(tails), dim=-1)) * (time_closeness_tensor*learnable_weight_tensor)
 
         # Apply sigmoid activation
-        normalized_scores = torch.sigmoid(raw_scores)
+        # normalized_scores = torch.sigmoid(raw_scores)
 
-        return normalized_scores
+        return raw_scores
     
     def mapping(self, ew, edge_index):
         head_indices = edge_index[0]

@@ -165,9 +165,9 @@ class GNNModel(nn.Module):
         # raw_scores = torch.sum(element_wise_product, dim=-1) * time_closeness_tensor
 
         # Apply sigmoid activation
-        normalized_scores = torch.sigmoid(raw_scores)
+        # normalized_scores = torch.sigmoid(raw_scores)
 
-        return normalized_scores
+        return raw_scores
     
     def mapping(self, ew, edge_index):
         head_indices = edge_index[0]
