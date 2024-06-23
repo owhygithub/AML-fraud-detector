@@ -45,6 +45,8 @@ def calculate_mrr(sorted_indices, true_values):
             continue
         ranks[i] = rank
 
+    return torch.mean(1.0 / ranks).item()
+
 print("Started the program...")
 # Specify the file path where the data is saved
 file_path = "/var/scratch/hwg580/graph_Balanced_HI-Large_Trans.pickle"
@@ -315,6 +317,8 @@ for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(inp
 
         val_labels = labels[val_fold_mask]
         val_predictions = assign_predictions(val_scores)
+
+        sorted_indices = torch.argsort(val_scores, descending=True)
 
         val_accuracy = accuracy_score(val_labels, val_predictions)
         val_precision = precision_score(val_labels, val_predictions)

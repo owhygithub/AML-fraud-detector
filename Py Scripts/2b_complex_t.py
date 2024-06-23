@@ -271,6 +271,8 @@ def calculate_mrr(sorted_indices, true_values):
             continue
         ranks[i] = rank
 
+    return torch.mean(1.0 / ranks).item()
+
 print("Training Loop...")
 # K-fold Cross-Validation
 k = 5
