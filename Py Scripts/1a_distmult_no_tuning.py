@@ -219,9 +219,18 @@ def calculate_mrr(sorted_indices, true_values):
     if positive_indices.numel() == 0:
         return 0.0
 
-    # Map indices in sorted_indices to their ranks --> RANKING
+    # # Map indices in sorted_indices to their ranks --> RANKING
+    # rank_map = {}
+    # for rank, idx in enumerate(sorted_indices, start=1):
+    #     rank_map[idx.item()] = rank
+
+    # Filter sorted_indices to only consider indices corresponding to positive labels
+    sorted_indices_positive = sorted_indices[positive_indices]
+    print(f"Sorted indices that are only positive - {len(sorted_indices_positive)}")
+
+    # Map indices in sorted_indices_positive to their ranks
     rank_map = {}
-    for rank, idx in enumerate(sorted_indices, start=1):
+    for rank, idx in enumerate(sorted_indices_positive, start=1):
         rank_map[idx.item()] = rank
 
     reciprocal_ranks = []
