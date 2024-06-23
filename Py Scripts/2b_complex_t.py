@@ -191,16 +191,16 @@ class GNNModel(nn.Module):
 # best_annealing_rate = saved_data['best_annealing_rate']
 # annealing_epochs = saved_data['annealing_epochs']
 
-# TRAINING
-learning_rate = 0.0001
+# Hyperparams --- adjust to model best hyperparams
+learning_rate = 0.01
 out_channels = 15
 weight_decay = 0.00005  # L2 regularization factor
 epochs = 50
 dropout = 0.1 # dropout probability
 
 # Annealing parameters
-annealing_rate = 0.01  # Rate at which to decrease the learning rate
-annealing_epochs = 20  # Number of epochs before decreasing learning rate
+annealing_rate = 0.001  # Rate at which to decrease the learning rate
+annealing_epochs = 10  # Number of epochs before decreasing learning rate
 
 print("Loading Model...")
 model = GNNModel(node_features=input_data.x.size(1), edge_features=input_data.edge_attr.size(1), out_channels=out_channels, dropout=dropout)
