@@ -89,8 +89,8 @@ class GNNLayer(MessagePassing):
         
     def forward(self, x, edge_index, edge_attr):
         # AXW0 + EW1
-        global adjacency_matrix
-        self.adjacency_matrix = adjacency_matrix
+        global adjacency_tensor
+        self.adjacency_matrix = adjacency_tensor
         
         axw = torch.sparse.mm(self.adjacency_matrix, x) @ self.weight_node
         ew = torch.matmul(edge_attr, self.weight_edge)
