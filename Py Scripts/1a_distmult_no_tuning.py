@@ -25,7 +25,7 @@ import pickle
 
 print("Started the program...")
 # Specify the file path where the data is saved
-file_path = "/var/scratch/hwg580/graph_Balanced_HI-Large_Trans.pickle"
+file_path = "/var/scratch/hwg580/graph_HI-Small_Trans_balanced.csv.pickle"
 
 print("Loading data from Data Pickle...")
 # Load the data from the file
@@ -47,6 +47,7 @@ input_data = saved_data['input_data']
 adjacency_tensor = saved_data['adjacency_tensor']
 
 print("Splitting data...")
+
 # Split the nodes into training, validation, and test sets
 num_edges = edges_features.shape[0]
 print(f"EDGES - {num_edges}")
