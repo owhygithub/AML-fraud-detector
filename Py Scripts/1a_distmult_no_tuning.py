@@ -25,7 +25,7 @@ import pickle
 
 print("Started the program...")
 # Specify the file path where the data is saved
-file_path = "/var/scratch/hwg580/graph_HI-Small_Trans_balanced.pickle"
+file_path = "/var/scratch/hwg580/graph_Balanced_HI-Large_Trans.pickle"
 
 print("Loading data from Data Pickle...")
 # Load the data from the file
@@ -157,7 +157,7 @@ class GNNModel(nn.Module):
 learning_rate = 0.01
 out_channels = 10
 weight_decay = 0.0005  # L2 regularization factor
-epochs = 50
+epochs = 100
 dropout = 0.1 # dropout probability
 
 # Annealing parameters
@@ -579,27 +579,6 @@ test_mrr = calculate_mrr(sorted_indices, test_labels)
 print(f"Accuracy: {test_accuracy:.4f}, Precision: {test_precision:.4f}, Recall: {test_recall:.4f}, F1 Score: {test_f1:.4f}")
 print(f"This is the MRR testing data: {test_mrr}")
 
-metrics_dict = evaluate_model(test_predictions, labels, sorted_indices, test_mask, model_name)
-
-# Print Evaluation Metrics
-print("Evaluation Metrics:")
-print("-------------------\n")
-for metric_name, metric_value in metrics_dict.items():
-    if metric_name == "Confusion Matrix":
-        print("Confusion Matrix:")
-        print(metric_value)
-    elif metric_name == "Classification Report":
-        print("Classification Report:")
-        print(metric_value)
-    elif metric_name == "ROC Curve":
-        fpr, tpr, roc_auc = metric_value
-        print("ROC Curve:")
-        print("- False Positive Rate:", fpr)
-        print("- True Positive Rate:", tpr)
-        print("- AUC:", roc_auc)
-    else:
-        print(f"{metric_name}: {metric_value}")
-    print()
 
 # LOGGING
 # Function to log the experiment

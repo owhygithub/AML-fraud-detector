@@ -7,7 +7,7 @@ from scipy.sparse import coo_matrix, save_npz
 
 print("Import Successful...")
 
-dataset = "HI-Small_Trans_balanced"
+dataset = "Balanced_HI-Large_Trans"
 filename = f'/var/scratch/hwg580/{dataset}.csv'
 
 # Create an instance of the AMLDataPreprocessing class

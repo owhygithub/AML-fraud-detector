@@ -73,7 +73,7 @@ def calculate_mrr(sorted_indices, true_values):
 
 print("Started the program...")
 # Specify the file path where the data is saved
-file_path = "/var/scratch/hwg580/graph_HI-Small_Trans_balanced.csv.pickle"
+file_path = "/var/scratch/hwg580/graph_Balanced_HI-Large_Trans.pickle"
 
 # Load the data from the file
 with open(file_path, "rb") as f:
@@ -217,7 +217,7 @@ def assign_predictions(val_scores, threshold=0.5):
 learning_rate = 0.01
 out_channels = 15
 weight_decay = 0.00005  # L2 regularization factor
-epochs = 50
+epochs = 100
 dropout = 0.1 # dropout probability
 
 # Annealing parameters
@@ -562,27 +562,6 @@ def evaluate_model(predictions, true_values, sorted_indices, mask, model_name):
 
     return metrics_dict
 
-metrics_dict = evaluate_model(val_predictions, labels, sorted_indices, val_mask, model_name)
-
-# Print Evaluation Metrics
-print("Evaluation Metrics:")
-print("-------------------\n")
-for metric_name, metric_value in metrics_dict.items():
-    if metric_name == "Confusion Matrix":
-        print("Confusion Matrix:")
-        print(metric_value)
-    elif metric_name == "Classification Report":
-        print("Classification Report:")
-        print(metric_value)
-    elif metric_name == "ROC Curve":
-        fpr, tpr, roc_auc = metric_value
-        print("ROC Curve:")
-        print("- False Positive Rate:", fpr)
-        print("- True Positive Rate:", tpr)
-        print("- AUC:", roc_auc)
-    else:
-        print(f"{metric_name}: {metric_value}")
-    print()
 
 best_model_state = torch.load(f'/var/scratch/hwg580/{model_name}_best.pt')
 model.load_state_dict(best_model_state)
