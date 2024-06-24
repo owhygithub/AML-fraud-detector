@@ -7,10 +7,10 @@ import numpy as np
 input_file = "/var/scratch/hwg580/HI-Large_Trans.csv"
 output_file = "/var/scratch/hwg580/Reduced_HI-Large_Trans.csv"
 
-# print("Loading original CSV file...")
-# df = pd.read_csv(input_file)
+print("Loading original CSV file...")
+df = pd.read_csv(input_file)
 
-# # Reduce to 30% of original size
+# Reduce to 30% of original size
 # print("Reducing the size of the dataset to 50%...")
 # df_sampled = df.sample(frac=0.5, random_state=42)
 
@@ -18,24 +18,27 @@ output_file = "/var/scratch/hwg580/Reduced_HI-Large_Trans.csv"
 # print(f"Saving reduced CSV file to {output_file}...")
 # df_sampled.to_csv(output_file, index=False)
 
-# Step 2: Load the just-saved reduced CSV file
-print(f"Loading reduced CSV file from {output_file}...")
-df_reduced = pd.read_csv(output_file)
+# # Step 2: Load the just-saved reduced CSV file
+# print(f"Loading reduced CSV file from {output_file}...")
+# df_reduced = pd.read_csv(output_file)
 
 # Step 3: Create a balanced dataset with 10% fraudulent transactions and rest non-fraudulent transactions, max 2 million transactions, and maintain connectivity
 
 # Separate rows with "Is Laundering" equal to 0 and 1 from the reduced dataset
 print("Separating fraudulent and non-fraudulent transactions...")
-df_reduced_0 = df_reduced[df_reduced["Is Laundering"] == 0]
-df_reduced_1 = df_reduced[df_reduced["Is Laundering"] == 1]
+# df_reduced_0 = df_reduced[df_reduced["Is Laundering"] == 0]
+# df_reduced_1 = df_reduced[df_reduced["Is Laundering"] == 1]
+
+df_reduced_0 = df[df["Is Laundering"] == 0]
+df_reduced_1 = df[df["Is Laundering"] == 1]
 
 # Print the number of instances in each category
 print(f"Number of non-fraudulent transactions: {len(df_reduced_0)}")
 print(f"Number of fraudulent transactions: {len(df_reduced_1)}")
 
 # Calculate the number of instances for the new balanced dataset
-total_instances = min(1000000, len(df_reduced))
-instances_0 = int(0.75 * total_instances)
+total_instances = min(1000000, len(df))
+instances_0 = int(0.8 * total_instances)
 instances_1 = total_instances - instances_0
 
 print(f"Creating a balanced dataset with {instances_0} non-fraudulent and {instances_1} fraudulent transactions...")
