@@ -37,8 +37,8 @@ print(f"Number of non-fraudulent transactions: {len(df_reduced_0)}")
 print(f"Number of fraudulent transactions: {len(df_reduced_1)}")
 
 # Calculate the number of instances for the new balanced dataset
-total_instances = min(1000000, len(df))
-instances_0 = int(0.8 * total_instances)
+total_instances = min(500000, len(df))
+instances_0 = int(0.6 * total_instances)
 instances_1 = total_instances - instances_0
 
 print(f"Creating a balanced dataset with {instances_0} non-fraudulent and {instances_1} fraudulent transactions...")
