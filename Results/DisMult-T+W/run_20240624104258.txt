@@ -1,0 +1,18 @@
+-- HYPERPARAMS:
+TimeStamp: 20240624104258
+Model: DisMult-T+W
+learning_rate: 0.01
+out_channels: 10
+Epoch: 50
+
+Weight_decay: 0.0005
+
+Dropout: 0.1
+
+-- RESULTS:
+Loss: 0.5645870566368103
+Accuracy: 0.80995
+Precision: 0.6690451919809718
+Recall: 0.09845
+F1 Score: 0.1716427668569934
+MRR: 0.00021010648924857378
