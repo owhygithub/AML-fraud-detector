@@ -454,7 +454,6 @@ if best_fold >= 0:
 
 # Save the best model based on the highest recall score
 if best_model_state is not None:
-    model_name = "your_model_name"
     torch.save(best_model_state, f'/var/scratch/hwg580/{model_name}_best.pt')
     print(f"\nBest model saved with highest recall: {best_recall:.4f}")
 
@@ -596,27 +595,27 @@ def evaluate_model(predictions, true_values, sorted_indices, mask, model_name):
 
     return metrics_dict
 
-# metrics_dict = evaluate_model(val_predictions, labels, sorted_indices, val_mask, model_name)
+metrics_dict = evaluate_model(val_predictions, labels, sorted_indices, val_mask, model_name)
 
-# # Print Evaluation Metrics
-# print("Evaluation Metrics:")
-# print("-------------------\n")
-# for metric_name, metric_value in metrics_dict.items():
-#     if metric_name == "Confusion Matrix":
-#         print("Confusion Matrix:")
-#         print(metric_value)
-#     elif metric_name == "Classification Report":
-#         print("Classification Report:")
-#         print(metric_value)
-#     elif metric_name == "ROC Curve":
-#         fpr, tpr, roc_auc = metric_value
-#         print("ROC Curve:")
-#         print("- False Positive Rate:", fpr)
-#         print("- True Positive Rate:", tpr)
-#         print("- AUC:", roc_auc)
-#     else:
-#         print(f"{metric_name}: {metric_value}")
-#     print()
+# Print Evaluation Metrics
+print("Evaluation Metrics:")
+print("-------------------\n")
+for metric_name, metric_value in metrics_dict.items():
+    if metric_name == "Confusion Matrix":
+        print("Confusion Matrix:")
+        print(metric_value)
+    elif metric_name == "Classification Report":
+        print("Classification Report:")
+        print(metric_value)
+    elif metric_name == "ROC Curve":
+        fpr, tpr, roc_auc = metric_value
+        print("ROC Curve:")
+        print("- False Positive Rate:", fpr)
+        print("- True Positive Rate:", tpr)
+        print("- AUC:", roc_auc)
+    else:
+        print(f"{metric_name}: {metric_value}")
+    print()
 
 best_model_state = torch.load(f'/var/scratch/hwg580/{model_name}_best.pt')
 model.load_state_dict(best_model_state)
