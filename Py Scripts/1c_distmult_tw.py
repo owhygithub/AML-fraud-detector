@@ -64,7 +64,7 @@ def calculate_mrr(sorted_indices, true_values):
 
 print("Started the program...")
 # Specify the file path where the data is saved
-file_path = "/var/scratch/hwg580/graph_HI-Small_Trans_balanced.csv.pickle"
+file_path = "/var/scratch/hwg580/graph_HI-Small_Trans_balanced.pickle"
 
 # Load the data from the file
 with open(file_path, "rb") as f:
