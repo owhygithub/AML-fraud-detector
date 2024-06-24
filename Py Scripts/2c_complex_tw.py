@@ -165,7 +165,7 @@ class GNNModel(nn.Module):
         self.reset_parameters()
         
     def reset_parameters(self):
-        nn.init.uniform_(self.learnable_weight, a=0, b=1) 
+        nn.init.normal_(self.learnable_weight, mean=0, std=0.1)  # Adjust std as needed # FIX
 
     def forward(self, x, edge_index, edge_attr, time_closeness_tensor):
         axw1, ew1 = self.conv1(x, edge_index, edge_attr)
