@@ -216,7 +216,7 @@ def assign_predictions(val_scores, threshold=0.6):
 
 # Hyperparams --- adjust to model best hyperparams
 learning_rate = 0.01
-out_channels = 15
+out_channels = 20
 weight_decay = 0.00005  # L2 regularization factor
 epochs = 100
 dropout = 0.1 # dropout probability

@@ -63,7 +63,7 @@ def calculate_mrr(sorted_indices, true_values):
 
 print("Started the program...")
 # Specify the file path where the data is saved
-file_path = "/var/scratch/hwg580/graph_HI-Small_Trans_balanced.pickle" # FIX 
+file_path = "/var/scratch/hwg580/graph_Balanced_HI-Large_Trans.pickle" # FIX 
 
 print("Loading data from Data Pickle...")
 # Load the data from the file
@@ -217,7 +217,7 @@ class GNNModel(nn.Module):
 
 # Hyperparams --- adjust to model best hyperparams
 learning_rate = 0.01
-out_channels = 30
+out_channels = 25
 weight_decay = 0.0005  # L2 regularization factor
 epochs = 100
 dropout = 0.1 # dropout probability
