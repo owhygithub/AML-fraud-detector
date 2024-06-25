@@ -98,6 +98,7 @@ adjacency_tensor = saved_data['adjacency_tensor']
 print("Splitting data...")
 # Split the nodes into training, validation, and test sets
 num_edges = edges_features.shape[0]
+print(f"Number of edge: {num_edges}")
 indices = list(range(num_edges))
 train_indices, test_val_indices = train_test_split(indices, test_size=0.4, stratify=labels)
 val_indices, test_indices = train_test_split(test_val_indices, test_size=0.5, stratify=labels[test_val_indices])
