@@ -229,7 +229,7 @@ class GNNModel(nn.Module):
 learning_rate = 0.01
 out_channels = 30
 weight_decay = 0.0005  # L2 regularization factor
-epochs = 200
+epochs = 100
 dropout = 0.1 # dropout probability
 
 # Annealing parameters
