@@ -199,9 +199,9 @@ class GNNModel(nn.Module):
         raw_scores = torch.sum(element_wise_product, dim=-1) * (time_closeness_tensor*learnable_weight_tensor)
 
         # Apply sigmoid activation
-        # normalized_scores = torch.sigmoid(raw_scores)
+        normalized_scores = torch.sigmoid(raw_scores)
 
-        return raw_scores
+        return normalized_scores
     
     def mapping(self, ew, edge_index):
         head_indices = edge_index[0]
@@ -280,7 +280,7 @@ def assign_top_n_predictions(val_scores, val_labels):
     predicted_labels[sorted_indices[:num_ones]] = 1
 
     return predicted_labels, sorted_indices
-def assign_predictions(val_scores, threshold=0.5):
+def assign_predictions(val_scores, threshold=0.6):
     # Assign labels based on a threshold
     predicted_labels = (val_scores >= threshold).float()
     return predicted_labels

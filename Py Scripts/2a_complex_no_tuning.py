@@ -178,14 +178,14 @@ class GNNModel(nn.Module):
         tails = torch.complex(tails, torch.zeros_like(tails))
 
         raw_scores = torch.real(torch.sum(heads * ew * torch.conj(tails), dim=-1))
-        # normalized_scores = torch.sigmoid(raw_scores)  # Apply sigmoid activation
-        return raw_scores
+        normalized_scores = torch.sigmoid(raw_scores)
+        return normalized_scores
 
     def mapping(self, ew, edge_index):
         return edge_index[0], edge_index[1]
 
 
-def assign_predictions(val_scores, threshold=0.5):
+def assign_predictions(val_scores, threshold=0.6):
     # Assign labels based on a threshold
     predicted_labels = (val_scores >= threshold).float()
     return predicted_labels
