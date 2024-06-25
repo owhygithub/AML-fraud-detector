@@ -249,191 +249,191 @@ def calculate_mrr(sorted_indices, true_values):
 
 
 # Initialize lists for storing fold-wise metrics
-fold_accuracy_list = []
-fold_precision_list = []
-fold_recall_list = []
-fold_f1_list = []
-fold_mrr_list = []
+# fold_accuracy_list = []
+# fold_precision_list = []
+# fold_recall_list = []
+# fold_f1_list = []
+# fold_mrr_list = []
 
-k = 5
-kf = KFold(n_splits=k, shuffle=True, random_state=42)
+# k = 5
+# kf = KFold(n_splits=k, shuffle=True, random_state=42)
 
-best_model_state = None
-best_recall = -1.0
-best_fold = -1
-best_train_losses = []
-best_val_losses = []
-best_epoch_metrics = {
-    'accuracy': [],
-    'precision': [],
-    'recall': [],
-    'f1': [],
-    'mrr': []
-}
+# best_model_state = None
+# best_recall = -1.0
+# best_fold = -1
+# best_train_losses = []
+# best_val_losses = []
+# best_epoch_metrics = {
+#     'accuracy': [],
+#     'precision': [],
+#     'recall': [],
+#     'f1': [],
+#     'mrr': []
+# }
 
-# Initialize variables for average metrics across all folds
-avg_accuracy = 0.0
-avg_precision = 0.0
-avg_recall = 0.0
-avg_f1 = 0.0
-avg_mrr = 0.0
+# # Initialize variables for average metrics across all folds
+# avg_accuracy = 0.0
+# avg_precision = 0.0
+# avg_recall = 0.0
+# avg_f1 = 0.0
+# avg_mrr = 0.0
 
-for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(input_data.edge_attr.shape[0]))):
-    print(f"Fold {fold+1}/{k}")
-    train_fold_mask = torch.zeros(input_data.edge_attr.shape[0], dtype=torch.bool)
-    val_fold_mask = torch.zeros(input_data.edge_attr.shape[0], dtype=torch.bool)
+# for fold, (train_fold_indices, val_fold_indices) in enumerate(kf.split(range(input_data.edge_attr.shape[0]))):
+#     print(f"Fold {fold+1}/{k}")
+#     train_fold_mask = torch.zeros(input_data.edge_attr.shape[0], dtype=torch.bool)
+#     val_fold_mask = torch.zeros(input_data.edge_attr.shape[0], dtype=torch.bool)
 
-    train_fold_mask[train_fold_indices] = True
-    val_fold_mask[val_fold_indices] = True
+#     train_fold_mask[train_fold_indices] = True
+#     val_fold_mask[val_fold_indices] = True
 
-    model = GNNModel(node_features=input_data.x.size(1), edge_features=input_data.edge_attr.size(1), out_channels=out_channels, dropout=dropout)
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
-    criterion = nn.BCEWithLogitsLoss()
+#     model = GNNModel(node_features=input_data.x.size(1), edge_features=input_data.edge_attr.size(1), out_channels=out_channels, dropout=dropout)
+#     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+#     criterion = nn.BCEWithLogitsLoss()
 
-    train_losses = []
-    val_losses = []
-    accuracy_per_epoch = []
-    precision_per_epoch = []
-    recall_per_epoch = []
-    f1_per_epoch = []
-    mrr_per_epoch = []
+#     train_losses = []
+#     val_losses = []
+#     accuracy_per_epoch = []
+#     precision_per_epoch = []
+#     recall_per_epoch = []
+#     f1_per_epoch = []
+#     mrr_per_epoch = []
 
-    for epoch in range(epochs):
-        model.train()
-        optimizer.zero_grad()
-        x_embedding, e_embedding, scores = model(input_data.x, input_data.edge_index[:, train_fold_mask], input_data.edge_attr[train_fold_mask])
-        loss = criterion(scores, labels[train_fold_mask].float())
-        loss.backward()
-        optimizer.step()
+#     for epoch in range(epochs):
+#         model.train()
+#         optimizer.zero_grad()
+#         x_embedding, e_embedding, scores = model(input_data.x, input_data.edge_index[:, train_fold_mask], input_data.edge_attr[train_fold_mask])
+#         loss = criterion(scores, labels[train_fold_mask].float())
+#         loss.backward()
+#         optimizer.step()
 
-        model.eval()
-        with torch.no_grad():
-            val_x_embedding, val_e_embedding, val_scores = model(input_data.x, input_data.edge_index[:, val_fold_mask], input_data.edge_attr[val_fold_mask])
-            val_loss = criterion(val_scores, labels[val_fold_mask].float()).item()
+#         model.eval()
+#         with torch.no_grad():
+#             val_x_embedding, val_e_embedding, val_scores = model(input_data.x, input_data.edge_index[:, val_fold_mask], input_data.edge_attr[val_fold_mask])
+#             val_loss = criterion(val_scores, labels[val_fold_mask].float()).item()
 
-        train_losses.append(loss.item())
-        val_losses.append(val_loss)
+#         train_losses.append(loss.item())
+#         val_losses.append(val_loss)
 
-        val_labels = labels[val_fold_mask]
-        val_predictions = assign_predictions(val_scores)
+#         val_labels = labels[val_fold_mask]
+#         val_predictions = assign_predictions(val_scores)
 
-        sorted_indices = torch.argsort(val_scores, descending=True)
+#         sorted_indices = torch.argsort(val_scores, descending=True)
 
-        val_accuracy = accuracy_score(val_labels, val_predictions)
-        val_precision = precision_score(val_labels, val_predictions)
-        val_recall = recall_score(val_labels, val_predictions)
-        val_f1 = f1_score(val_labels, val_predictions)
-        val_mrr = calculate_mrr(torch.argsort(val_scores, descending=True), val_labels)
+#         val_accuracy = accuracy_score(val_labels, val_predictions)
+#         val_precision = precision_score(val_labels, val_predictions)
+#         val_recall = recall_score(val_labels, val_predictions)
+#         val_f1 = f1_score(val_labels, val_predictions)
+#         val_mrr = calculate_mrr(torch.argsort(val_scores, descending=True), val_labels)
 
-        accuracy_per_epoch.append(val_accuracy)
-        precision_per_epoch.append(val_precision)
-        recall_per_epoch.append(val_recall)
-        f1_per_epoch.append(val_f1)
-        mrr_per_epoch.append(val_mrr)
+#         accuracy_per_epoch.append(val_accuracy)
+#         precision_per_epoch.append(val_precision)
+#         recall_per_epoch.append(val_recall)
+#         f1_per_epoch.append(val_f1)
+#         mrr_per_epoch.append(val_mrr)
 
-        print(f"\nEpoch {epoch}, Training Loss: {loss:.4f}, Validation Loss: {val_loss:.4f}")
-        print(f"Accuracy: {val_accuracy:.4f}, Precision: {val_precision:.4f}, Recall: {val_recall:.4f}, F1 Score: {val_f1:.4f}, MRR: {val_mrr}")
+#         print(f"\nEpoch {epoch}, Training Loss: {loss:.4f}, Validation Loss: {val_loss:.4f}")
+#         print(f"Accuracy: {val_accuracy:.4f}, Precision: {val_precision:.4f}, Recall: {val_recall:.4f}, F1 Score: {val_f1:.4f}, MRR: {val_mrr}")
 
-    best_epoch_metrics['accuracy'].append(accuracy_per_epoch)
-    best_epoch_metrics['precision'].append(precision_per_epoch)
-    best_epoch_metrics['recall'].append(recall_per_epoch)
-    best_epoch_metrics['f1'].append(f1_per_epoch)
-    best_epoch_metrics['mrr'].append(mrr_per_epoch)
+#     best_epoch_metrics['accuracy'].append(accuracy_per_epoch)
+#     best_epoch_metrics['precision'].append(precision_per_epoch)
+#     best_epoch_metrics['recall'].append(recall_per_epoch)
+#     best_epoch_metrics['f1'].append(f1_per_epoch)
+#     best_epoch_metrics['mrr'].append(mrr_per_epoch)
 
-    best_train_losses.append(train_losses)
-    best_val_losses.append(val_losses)
+#     best_train_losses.append(train_losses)
+#     best_val_losses.append(val_losses)
 
-    current_fold_best_metrics = {
-        'accuracy': max(accuracy_per_epoch),
-        'precision': max(precision_per_epoch),
-        'recall': max(recall_per_epoch),
-        'f1': max(f1_per_epoch),
-        'mrr': max(mrr_per_epoch),
-        'val_predictions': val_predictions,
-        'sorted_indices': sorted_indices
-    }
+#     current_fold_best_metrics = {
+#         'accuracy': max(accuracy_per_epoch),
+#         'precision': max(precision_per_epoch),
+#         'recall': max(recall_per_epoch),
+#         'f1': max(f1_per_epoch),
+#         'mrr': max(mrr_per_epoch),
+#         'val_predictions': val_predictions,
+#         'sorted_indices': sorted_indices
+#     }
 
-    if current_fold_best_metrics['recall'] > best_recall:
-        best_recall = current_fold_best_metrics['recall']
-        best_fold = fold
-        best_model_state = model.state_dict()
+#     if current_fold_best_metrics['recall'] > best_recall:
+#         best_recall = current_fold_best_metrics['recall']
+#         best_fold = fold
+#         best_model_state = model.state_dict()
 
-    fold_accuracy_list.append(current_fold_best_metrics['accuracy'])
-    fold_precision_list.append(current_fold_best_metrics['precision'])
-    fold_recall_list.append(current_fold_best_metrics['recall'])
-    fold_f1_list.append(current_fold_best_metrics['f1'])
-    fold_mrr_list.append(current_fold_best_metrics['mrr'])
+#     fold_accuracy_list.append(current_fold_best_metrics['accuracy'])
+#     fold_precision_list.append(current_fold_best_metrics['precision'])
+#     fold_recall_list.append(current_fold_best_metrics['recall'])
+#     fold_f1_list.append(current_fold_best_metrics['f1'])
+#     fold_mrr_list.append(current_fold_best_metrics['mrr'])
 
-avg_accuracy = sum(fold_accuracy_list) / k
-avg_precision = sum(fold_precision_list) / k
-avg_recall = sum(fold_recall_list) / k
-avg_f1 = sum(fold_f1_list) / k
-avg_mrr = sum(fold_mrr_list) / k
+# avg_accuracy = sum(fold_accuracy_list) / k
+# avg_precision = sum(fold_precision_list) / k
+# avg_recall = sum(fold_recall_list) / k
+# avg_f1 = sum(fold_f1_list) / k
+# avg_mrr = sum(fold_mrr_list) / k
 
-print("\nAverage Metrics Across All Folds:")
-print(f"Avg Accuracy: {avg_accuracy:.4f}")
-print(f"Avg Precision: {avg_precision:.4f}")
-print(f"Avg Recall: {avg_recall:.4f}")
-print(f"Avg F1 Score: {avg_f1:.4f}")
-print(f"Avg MRR: {avg_mrr:.4f}")
+# print("\nAverage Metrics Across All Folds:")
+# print(f"Avg Accuracy: {avg_accuracy:.4f}")
+# print(f"Avg Precision: {avg_precision:.4f}")
+# print(f"Avg Recall: {avg_recall:.4f}")
+# print(f"Avg F1 Score: {avg_f1:.4f}")
+# print(f"Avg MRR: {avg_mrr:.4f}")
 
-if best_fold >= 0:
-    print("\nBest Model Metrics:")
-    print(f"Best Accuracy: {max(best_epoch_metrics['accuracy'][best_fold]):.4f}")
-    print(f"Best Precision: {max(best_epoch_metrics['precision'][best_fold]):.4f}")
-    print(f"Best Recall: {max(best_epoch_metrics['recall'][best_fold]):.4f}")
-    print(f"Best F1 Score: {max(best_epoch_metrics['f1'][best_fold]):.4f}")
-    print(f"Best MRR: {max(best_epoch_metrics['mrr'][best_fold]):.4f}")
+# if best_fold >= 0:
+#     print("\nBest Model Metrics:")
+#     print(f"Best Accuracy: {max(best_epoch_metrics['accuracy'][best_fold]):.4f}")
+#     print(f"Best Precision: {max(best_epoch_metrics['precision'][best_fold]):.4f}")
+#     print(f"Best Recall: {max(best_epoch_metrics['recall'][best_fold]):.4f}")
+#     print(f"Best F1 Score: {max(best_epoch_metrics['f1'][best_fold]):.4f}")
+#     print(f"Best MRR: {max(best_epoch_metrics['mrr'][best_fold]):.4f}")
 
-if best_model_state is not None:
-    torch.save(best_model_state, f'/var/scratch/hwg580/{model_name}_best.pt')
-    print(f"\nBest model saved with highest recall: {best_recall:.4f}")
+# if best_model_state is not None:
+#     torch.save(best_model_state, f'/var/scratch/hwg580/{model_name}_best.pt')
+#     print(f"\nBest model saved with highest recall: {best_recall:.4f}")
 
-results_folder = f'/home/hwg580/thesis/AML-fraud-detector/Results/{model_name}/Validation'
-os.makedirs(results_folder, exist_ok=True)
+# results_folder = f'/home/hwg580/thesis/AML-fraud-detector/Results/{model_name}/Validation'
+# os.makedirs(results_folder, exist_ok=True)
 
-epoch_numbers = list(range(1, len(best_train_losses[best_fold]) + 1))
+# epoch_numbers = list(range(1, len(best_train_losses[best_fold]) + 1))
 
-plt.figure(figsize=(10, 6))
-plt.plot(epoch_numbers, best_train_losses[best_fold], label="Training Loss")
-plt.plot(epoch_numbers, best_val_losses[best_fold], label="Validation Loss")
-plt.xlabel("Epochs")
-plt.ylabel("Losses")
-plt.title("Training and Validation Losses Over Epochs (Best Fold)")
-plt.legend()
-plt.grid(True)
-plt.savefig(os.path.join(results_folder, 'training_validation_losses.png'))
-plt.show()
+# plt.figure(figsize=(10, 6))
+# plt.plot(epoch_numbers, best_train_losses[best_fold], label="Training Loss")
+# plt.plot(epoch_numbers, best_val_losses[best_fold], label="Validation Loss")
+# plt.xlabel("Epochs")
+# plt.ylabel("Losses")
+# plt.title("Training and Validation Losses Over Epochs (Best Fold)")
+# plt.legend()
+# plt.grid(True)
+# plt.savefig(os.path.join(results_folder, 'training_validation_losses.png'))
+# plt.show()
 
-plt.figure(figsize=(14, 10))
+# plt.figure(figsize=(14, 10))
 
-plt.subplot(2, 2, 1)
-plt.plot(epoch_numbers, best_epoch_metrics['accuracy'][best_fold], label="Accuracy")
-plt.xlabel('Epoch')
-plt.ylabel('Accuracy')
-plt.legend()
+# plt.subplot(2, 2, 1)
+# plt.plot(epoch_numbers, best_epoch_metrics['accuracy'][best_fold], label="Accuracy")
+# plt.xlabel('Epoch')
+# plt.ylabel('Accuracy')
+# plt.legend()
 
-plt.subplot(2, 2, 2)
-plt.plot(epoch_numbers, best_epoch_metrics['precision'][best_fold], label="Precision")
-plt.xlabel('Epoch')
-plt.ylabel('Precision')
-plt.legend()
+# plt.subplot(2, 2, 2)
+# plt.plot(epoch_numbers, best_epoch_metrics['precision'][best_fold], label="Precision")
+# plt.xlabel('Epoch')
+# plt.ylabel('Precision')
+# plt.legend()
 
-plt.subplot(2, 2, 3)
-plt.plot(epoch_numbers, best_epoch_metrics['recall'][best_fold], label="Recall")
-plt.xlabel('Epoch')
-plt.ylabel('Recall')
-plt.legend()
+# plt.subplot(2, 2, 3)
+# plt.plot(epoch_numbers, best_epoch_metrics['recall'][best_fold], label="Recall")
+# plt.xlabel('Epoch')
+# plt.ylabel('Recall')
+# plt.legend()
 
-plt.subplot(2, 2, 4)
-plt.plot(epoch_numbers, best_epoch_metrics['f1'][best_fold], label="F1 Score")
-plt.xlabel('Epoch')
-plt.ylabel('F1 Score')
-plt.legend()
+# plt.subplot(2, 2, 4)
+# plt.plot(epoch_numbers, best_epoch_metrics['f1'][best_fold], label="F1 Score")
+# plt.xlabel('Epoch')
+# plt.ylabel('F1 Score')
+# plt.legend()
 
-plt.tight_layout()
-plt.savefig(os.path.join(results_folder, 'evaluation_metrics.png'))
-plt.show()
+# plt.tight_layout()
+# plt.savefig(os.path.join(results_folder, 'evaluation_metrics.png'))
+# plt.show()
 
 
 import now 
